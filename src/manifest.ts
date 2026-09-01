@@ -14,7 +14,8 @@ export const cardTableManifest = {
   displayName: "Kartentisch",
   description:
     "Gemeinsamer Spieltisch für zehn Kartenspiele: Mau-Mau, Schwimmen, Stichwette, Zahlenreihe, Lügen, Schwarzer Peter, Fischen, Herzeln, Doppelkopf und freies Spiel.",
-  minPlayers: 2,
+  // Eine Person reicht: Fehlende Plätze füllt der Tisch mit KI-Sitzen auf.
+  minPlayers: 1,
   maxPlayers: 6,
   hostView: "CardTableHostScene",
   controllerView: "card-table",
@@ -92,7 +93,13 @@ export const cardTableManifest = {
         settingKey: cardTableRoomSettingKeys.deck,
         actionKey: "deck",
         label: "Kartendeck",
-        description: "Gilt für Mau-Mau, Schwimmen, Lügen, Fischen und Freies Spiel. Die anderen Regelwerke bringen ihr eigenes Blatt mit.",
+        description: "Blatt für dieses Regelwerk.",
+        // Regelwerke mit festem Blatt bekommen die Auswahl gar nicht erst zu
+        // sehen - sie hätte dort keine Wirkung.
+        visibleWhen: {
+          field: cardTableRoomSettingKeys.ruleset,
+          anyOf: ["mau-mau", "schwimmen", "luegen", "fischen", "free-play"]
+        },
         defaultValue: "french-52",
         options: [
           { id: "french-52", label: "Französisch (52)", description: "Pik, Herz, Karo, Kreuz von 2 bis Ass." },
@@ -108,7 +115,14 @@ export const cardTableManifest = {
         settingKey: cardTableRoomSettingKeys.handSize,
         actionKey: "handSize",
         label: "Handkarten",
-        description: "Karten pro Spieler beim Austeilen. Schwimmen spielt immer mit drei, die Stichwette mit einer Karte mehr pro Runde.",
+        description: "Karten pro Spieler beim Austeilen.",
+        // Nur dort sichtbar, wo die Zahl wirklich frei ist: Schwimmen spielt
+        // immer mit drei, die Stichwette steigert selbst, und die übrigen
+        // Regelwerke teilen das ganze Blatt aus.
+        visibleWhen: {
+          field: cardTableRoomSettingKeys.ruleset,
+          anyOf: ["mau-mau", "luegen", "fischen", "free-play"]
+        },
         min: 3,
         max: 12,
         step: 1,
@@ -119,8 +133,9 @@ export const cardTableManifest = {
         id: "doppelkopfScoring",
         settingKey: cardTableRoomSettingKeys.doppelkopfScoring,
         actionKey: "doppelkopfScoring",
-        label: "Doppelkopf: Augen",
-        description: "Nur für Doppelkopf. Laufend mitzählen oder erst am Ende auszählen, wie am echten Tisch.",
+        label: "Augen zählen",
+        description: "Laufend mitzählen oder erst am Ende auszählen, wie am echten Tisch.",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
         defaultValue: "live",
         options: [
           { id: "live", label: "Laufend zählen", description: "Jeder Stich zeigt seine Augen, der Sitzplatz den Stand." },
@@ -134,7 +149,7 @@ export const cardTableManifest = {
         actionKey: "botCount",
         label: "KI-Spieler",
         description:
-          "Virtuelle Mitspieler, die der Tisch selbst steuert. Sie füllen bis zu sechs Plätze auf und spielen nach demselben Regelwerk.",
+          "Virtuelle Mitspieler, die der Tisch selbst steuert. Sie füllen bis zu sechs Plätze auf und spielen nach demselben Regelwerk. Fehlt einem Regelwerk die Mindestbesetzung, füllt der Tisch von selbst auf.",
         min: 0,
         max: 5,
         step: 1,

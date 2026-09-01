@@ -69,6 +69,8 @@ export const freePlayRuleset: CardRuleset = {
   label: { de: "Freies Spiel", en: "Free play" },
   defaultDeckId: "french-52",
   defaultHandSize: 5,
+  /** Der offene Tisch geht auch allein. */
+  minSeats: 1,
   openStartCard: true,
   turnBased: false,
 

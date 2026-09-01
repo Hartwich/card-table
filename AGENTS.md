@@ -82,6 +82,18 @@ durch. Ein Regelwerk liest daraus mit `readSetting(context, key, fallback)` und
 braucht dafür keine Änderung am Server - nur ein Feld im `lobbySetup` des
 Manifests und die Annahme in `configure-lobby`.
 
+Ein Feld, das nur für einen Teil der Regelwerke gilt, bekommt `visibleWhen` und
+verschwindet sonst aus der Lobby. Nie ein wirkungsloses Feld stehen lassen: Wer
+bei Doppelkopf ein Kartendeck wählen darf, ohne dass es etwas ändert, hält das
+zu Recht für einen Fehler.
+
+## Sitzplätze
+
+`minSeats` am Regelwerk ist die Mindestbesetzung, Menschen und KI zusammen. Der
+Server füllt fehlende Plätze automatisch mit KI-Sitzen auf, damit eine Person
+allein starten kann. Die Zahl gehört ans Regelwerk, nicht in die Runtime - nur
+das Spiel weiss, wie viele Hände es braucht.
+
 ## Protokoll-Kopie
 
 `src/protocol.ts` und `packages/protocol/src/games/cardTable.ts` der Plattform

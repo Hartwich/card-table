@@ -245,6 +245,8 @@ export const doppelkopfRuleset: CardRuleset = {
   defaultDeckId: "doppelkopf-48",
   fixedDeckId: "doppelkopf-48",
   defaultHandSize: 12,
+  /** Doppelkopf ist ein Spiel zu viert. */
+  minSeats: 4,
   openStartCard: false,
   turnBased: true,
 

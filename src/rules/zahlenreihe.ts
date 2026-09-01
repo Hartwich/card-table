@@ -142,6 +142,8 @@ export const numberRowsRuleset: CardRuleset = {
   defaultDeckId: "zahlen-80",
   fixedDeckId: "zahlen-80",
   defaultHandSize: 10,
+  /** Zu zweit spielbar. */
+  minSeats: 2,
   openStartCard: false,
   turnBased: true,
 

@@ -183,6 +183,8 @@ export const fischenRuleset: CardRuleset = {
   defaultDeckId: "french-52",
   allowedDeckIds: ["french-52", "skat-32"],
   defaultHandSize: 5,
+  /** Unter drei Sitzen ergibt das Spiel keinen Sinn. */
+  minSeats: 3,
   openStartCard: false,
   turnBased: true,
 

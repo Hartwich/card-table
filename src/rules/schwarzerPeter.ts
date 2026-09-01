@@ -150,6 +150,8 @@ export const schwarzerPeterRuleset: CardRuleset = {
   defaultDeckId: "peter-49",
   fixedDeckId: "peter-49",
   defaultHandSize: 8,
+  /** Unter drei Sitzen ergibt das Spiel keinen Sinn. */
+  minSeats: 3,
   openStartCard: false,
   turnBased: true,
 

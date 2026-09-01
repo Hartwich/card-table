@@ -193,6 +193,8 @@ export const herzelnRuleset: CardRuleset = {
   defaultDeckId: "french-52",
   fixedDeckId: "french-52",
   defaultHandSize: 13,
+  /** Unter drei Sitzen ergibt das Spiel keinen Sinn. */
+  minSeats: 3,
   openStartCard: false,
   turnBased: true,
 

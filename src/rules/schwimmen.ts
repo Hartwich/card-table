@@ -313,6 +313,8 @@ export const schwimmenRuleset: CardRuleset = {
   defaultDeckId: "skat-32",
   allowedDeckIds: ["skat-32", "french-52"],
   defaultHandSize: 3,
+  /** Zu zweit spielbar. */
+  minSeats: 2,
   openStartCard: false,
   turnBased: true,
 

@@ -56,6 +56,14 @@ einer einzigen Person am Tisch verwenden.
 Vor jedem Zug legt ein Bot eine sichtbare Denkpause von etwa 1,2 Sekunden ein,
 damit am Tisch nachvollziehbar bleibt, was passiert ist.
 
+**Eine Person reicht.** Jedes Regelwerk nennt über `minSeats` seine
+Mindestbesetzung — Doppelkopf vier, Herzeln drei, Mau-Mau zwei. Fehlen Plätze,
+füllt der Tisch sie von selbst mit KI-Sitzen auf: Doppelkopf allein starten
+ergibt drei Bots, ohne dass die Zahl vorher eingestellt werden muss. Das Feld
+"KI-Spieler" hebt die Zahl darüber hinaus an, senken kann es sie nicht unter die
+Mindestbesetzung. Nach oben deckelt der Tisch auf die freien Plätze — Menschen
+haben immer Vorrang.
+
 Wichtig für die Architektur: Ein Bot bekommt keinen Sonderweg. Der Antrieb in
 `src/bots/driver.ts` fragt das Regelwerk nur nach einer *Absicht* und schickt
 sie anschließend durch genau dieselben Funktionen wie den Input eines Handys.
@@ -155,6 +163,7 @@ Optional stehen bereit:
 | `seatStatus(state, context, playerId)` | kurzer Zustand am Sitzplatz, z. B. "Mau!" oder "2 Leben" |
 | `botMove(state, context, playerId)` | Taktik der KI-Spieler; ohne diesen Haken spielt der generische Bot |
 | `botActsOutOfTurn` | auch KI-Sitze fragen, die nicht am Zug sind (Zwischenrufe wie das Zweifeln bei Lügen) |
+| `minSeats` | Mindestbesetzung; fehlende Plätze füllt der Tisch mit KI-Sitzen auf |
 
 Eigene Lobby-Optionen braucht kein Zutun der Runtime: Sie reicht die
 Raumeinstellungen als `context.settings` durch, ein Regelwerk liest daraus mit
@@ -185,16 +194,21 @@ Zug sind: bei Lügen darf jeder zweifeln.
 
 ## Setup im Host-Lobby
 
-- Regelwerk: Mau-Mau, Schwimmen, Stichwette, Zahlenreihe, Lügen, Schwarzer
-  Peter, Fischen, Herzeln, Doppelkopf oder Freies Spiel
-- Kartendeck: eines der wählbaren Decks oben (Regelwerke mit festem Blatt
-  überschreiben die Auswahl)
-- Handkarten: 3 bis 12 (Schwimmen spielt immer mit drei, die Stichwette mit
-  einer Karte mehr pro Runde, Schwarzer Peter, Herzeln und Doppelkopf teilen
-  das ganze Blatt aus)
-- Doppelkopf: Augen laufend zählen oder erst am Ende auszählen
-- KI-Spieler: 0 bis 5, gedeckelt auf sechs Sitze insgesamt
-- Kartenbild: Klassisch, Modern oder Klar
+Die Auswahl richtet sich nach dem Regelwerk: Was gerade nichts bewirkt, wird gar
+nicht erst gezeigt.
+
+| Feld | Sichtbar bei |
+| --- | --- |
+| Regelwerk | immer — eines der zehn |
+| Kartendeck | Mau-Mau, Schwimmen, Lügen, Fischen, Freies Spiel. Die übrigen bringen ihr eigenes Blatt mit |
+| Handkarten (3–12) | Mau-Mau, Lügen, Fischen, Freies Spiel. Schwimmen spielt immer mit drei, die Stichwette steigert selbst, der Rest teilt das ganze Blatt aus |
+| Augen zählen | nur Doppelkopf: laufend oder erst am Ende |
+| KI-Spieler (0–5) | immer |
+| Kartenbild | immer — Klassisch, Modern, Klar |
+
+Möglich macht das `visibleWhen` im `lobbySetup` der Plattform: Ein Feld nennt
+das Feld, von dem es abhängt, und die Werte, bei denen es erscheint. Host und
+Handy werten dieselbe Regel aus (`isLobbyFieldVisible`).
 
 Während der Runde zeigt der Host die Buttons, die das Regelwerk liefert —
 je nach Spiel Ziehen, Fertig, Schieben, Klopfen, Zweifeln, Ablage mischen oder
@@ -236,6 +250,9 @@ npm run dev:all
   Rangliste der Plattform - die kennt ausschließlich echte Spieler.
 - Der Doppelkopf-Bot spielt ohne Partnerwissen; er sticht deshalb gelegentlich
   den eigenen Partner ab.
+- `minSeats` füllt nach oben auf, deckelt aber nicht: Setzen sich fünf Menschen
+  an einen Doppelkopf-Tisch, läuft die Runde mit fünf Sitzen weiter, obwohl das
+  Spiel für vier gedacht ist.
 
 ## Rechte
 

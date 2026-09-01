@@ -142,6 +142,8 @@ export const luegenRuleset: CardRuleset = {
   defaultDeckId: "french-52",
   allowedDeckIds: ["french-52", "skat-32", "party-40"],
   defaultHandSize: 6,
+  /** Unter drei Sitzen ergibt das Spiel keinen Sinn. */
+  minSeats: 3,
   openStartCard: false,
   turnBased: false,
 

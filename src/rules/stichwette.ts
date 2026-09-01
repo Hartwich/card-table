@@ -209,6 +209,8 @@ export const trickBetRuleset: CardRuleset = {
   defaultDeckId: "stichwette-60",
   fixedDeckId: "stichwette-60",
   defaultHandSize: 5,
+  /** Unter drei Sitzen ergibt das Spiel keinen Sinn. */
+  minSeats: 3,
   openStartCard: false,
   turnBased: true,
 

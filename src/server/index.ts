@@ -94,16 +94,23 @@ function resolveHandSize(context: ServerGameContext, ruleset: CardRuleset, seatC
   );
 }
 
+const defaultMinSeats = 2;
+
 /**
- * KI-Sitze dieser Runde. Die Zahl kommt aus dem Host-Setup und wird so
- * gedeckelt, dass Menschen und Bots zusammen an den Tisch passen.
+ * KI-Sitze dieser Runde.
+ *
+ * Die Zahl kommt aus dem Host-Setup, wird aber auf die Mindestbesetzung des
+ * Regelwerks angehoben: Wer allein Doppelkopf wählt, bekommt drei Bots, ohne
+ * das vorher einstellen zu müssen. Nach oben deckelt der Tisch auf die freien
+ * Plätze - Menschen haben immer Vorrang.
  */
-function resolveBotSeats(context: ServerGameContext): CardBotSeat[] {
+function resolveBotSeats(context: ServerGameContext, ruleset: CardRuleset): CardBotSeat[] {
   const setting = readSetting(context, cardTableRoomSettingKeys.botCount);
   const requested = typeof setting === "number" && Number.isFinite(setting) ? Math.round(setting) : 0;
   const free = Math.max(0, cardTableManifest.maxPlayers - context.players.length);
+  const missing = Math.max(0, (ruleset.minSeats ?? defaultMinSeats) - context.players.length);
 
-  return createBotSeats(Math.max(0, Math.min(maxBotSeats, requested, free)));
+  return createBotSeats(Math.max(0, Math.min(maxBotSeats, free, Math.max(requested, missing))));
 }
 
 const scoredPhases = new Set(["locked", "result", "scoreboard", "finished"]);
@@ -176,7 +183,7 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
 function createRuntimeState(context: ServerGameContext): CardGameState {
   const ruleset = resolveRuleset(context);
   const deck = resolveDeck(context, ruleset);
-  const bots = resolveBotSeats(context);
+  const bots = resolveBotSeats(context, ruleset);
   const botScores = carryBotScores(context, bots);
   const playerIds = [...context.players.map((player) => player.id), ...bots.map((bot) => bot.id)];
   const handSize = resolveHandSize(context, ruleset, playerIds.length);

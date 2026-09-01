@@ -100,6 +100,14 @@ export interface CardRuleset {
   turnBased: boolean;
   /** Erzwingt ein Deck und blendet die Deckauswahl des Hosts aus. */
   fixedDeckId?: string;
+  /**
+   * Mindestbesetzung am Tisch, Menschen und KI zusammen.
+   *
+   * Fehlen Plätze, füllt der Kartentisch sie von selbst mit KI-Sitzen auf -
+   * so kann eine Person allein Doppelkopf gegen drei Bots spielen, ohne die
+   * Zahl vorher von Hand einzustellen. Ohne Angabe gelten zwei Sitze.
+   */
+  minSeats?: number;
   /** Schränkt die Deckauswahl ein, wenn mehrere Decks passen. */
   allowedDeckIds?: string[];
   /** Handkarten dieser Runde, z. B. steigend wie bei der Stichwette. */

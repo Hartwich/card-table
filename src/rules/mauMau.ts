@@ -140,6 +140,8 @@ export const mauMauRuleset: CardRuleset = {
   label: { de: "Mau-Mau", en: "Mau Mau" },
   defaultDeckId: "french-52",
   defaultHandSize: 5,
+  /** Zu zweit spielbar. */
+  minSeats: 2,
   openStartCard: true,
   turnBased: true,
 
