@@ -29,14 +29,29 @@ export interface CardTableHandCardState extends CardTableCardState {
 
 export type CardTableStackKind = "draw" | "discard" | "zone";
 
+/**
+ * Wie ein Stapel gezeichnet wird.
+ *
+ * `pile` ist ein Haufen: `cards[0]` ist die oberste Karte, gezeigt werden
+ * höchstens drei, stark überlappend. `spread` ist eine Auslage: alle Karten
+ * werden gezeigt, in genau der Reihenfolge des Modells und nur leicht
+ * überlappend - so, wie ein Stich auf dem Tisch liegt.
+ */
+export type CardTableStackLayout = "pile" | "spread";
+
 export interface CardTableStackState {
   id: string;
   label: string;
   kind: CardTableStackKind;
   count: number;
-  /** Offen liegende Karten, oberste zuerst. Bei verdeckten Stapeln leer. */
+  /**
+   * Offen liegende Karten. Bei `pile` oberste zuerst, bei `spread` in
+   * Spielreihenfolge. Bei verdeckten Stapeln leer.
+   */
   cards: CardTableCardState[];
   faceDown: boolean;
+  /** Zeichenweise; ohne Angabe `pile`. */
+  layout?: CardTableStackLayout;
 }
 
 export interface CardTableSeatState {
@@ -162,6 +177,7 @@ export interface CardTableConfigureLobbyAction {
   handSize?: number;
   cardStyle?: string;
   botCount?: number;
+  doppelkopfScoring?: string;
 }
 
 export type CardTableHostAction = CardTableHostActionMessage | CardTableConfigureLobbyAction;

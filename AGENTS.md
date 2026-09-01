@@ -64,6 +64,24 @@ Erst eine neue Layout-Variante bauen, wenn das `card_hand`-Layout die
 Interaktion wirklich nicht abbildet - es gehört der Plattform und wird von
 allen Kartenspielen geteilt.
 
+## Tischstapel
+
+- `layout: "pile"` (Voreinstellung) ist ein Haufen: `cards[0]` oben, höchstens
+  drei sichtbar. `layout: "spread"` ist eine Auslage: alle Karten, in
+  Modellreihenfolge. Wer einen Stich schickt, nimmt `spread` - sonst schneidet
+  der Renderer ab der vierten Karte ab.
+- Ein fertiger Stich gehört nicht sofort ins Archiv. Die Stichspiele legen ihn
+  in die Zone `letzter-stich` und räumen ihn erst weg, wenn der nächste Stich
+  komplett ist. Der Kartenort ist für die Wertung egal, die Zähler stehen in
+  `extra`.
+
+## Eigene Lobby-Optionen
+
+Die Runtime reicht die Raumeinstellungen unverändert als `context.settings`
+durch. Ein Regelwerk liest daraus mit `readSetting(context, key, fallback)` und
+braucht dafür keine Änderung am Server - nur ein Feld im `lobbySetup` des
+Manifests und die Annahme in `configure-lobby`.
+
 ## Protokoll-Kopie
 
 `src/protocol.ts` und `packages/protocol/src/games/cardTable.ts` der Plattform

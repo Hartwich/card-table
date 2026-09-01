@@ -168,7 +168,8 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
     language: context.language,
     now: context.now,
     playerNames,
-    scores
+    scores,
+    settings: context.roomSettings
   };
 }
 
@@ -196,7 +197,8 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     scores: {
       ...Object.fromEntries(context.players.map((player) => [player.id, player.score])),
       ...botScores
-    }
+    },
+    settings: context.roomSettings
   };
   const intro = ruleset.introMessage(rulesetContext);
   const initial: CardGameState = {
@@ -403,6 +405,11 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
       if (typeof configure.cardStyle === "string") {
         roomSettings[cardTableRoomSettingKeys.cardStyle] =
           cardStyles.find((style) => style === configure.cardStyle) ?? "classic";
+      }
+
+      if (typeof configure.doppelkopfScoring === "string") {
+        roomSettings[cardTableRoomSettingKeys.doppelkopfScoring] =
+          configure.doppelkopfScoring === "end" ? "end" : "live";
       }
 
       if (typeof configure.botCount === "number" && Number.isFinite(configure.botCount)) {

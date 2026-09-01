@@ -16,7 +16,7 @@ Handy und austauschbare Regelwerke.
 | **Schwarzer Peter** | Paare ablegen, beim Nachbarn blind eine Karte ziehen. Wer am Ende die einzelne Karte hält, verliert. | Automatisches Ablegen, blindes Ziehen aus fremder Hand, eigenes Deck |
 | **Fischen** | Einen Mitspieler nach einem Wert fragen. Vier gleiche wandern als Satz auf den Tisch, sonst wird gefischt. | Auswahl eines Mitspielers, Auslagen als eigene Zonen |
 | **Herzeln** | Stiche vermeiden: jedes Herz zählt 1, die Pik-Dame 13. Farbe bedienen, Herz erst nach dem Bruch. Alle Strafpunkte auf einmal drehen die Wertung um. | Bedienzwang, negative Wertung, Sonderregel über die ganze Runde |
-| **Doppelkopf** | Jede Karte doppelt. Karo, alle Damen, alle Buben und die Herz-Zehn sind Trumpf. Die Kreuz-Damen bilden Re gegen Kontra. | Verdeckte Parteien, Trumpfordnung quer zu den Farben, Wertung nach Augen |
+| **Doppelkopf** | Jede Karte doppelt. Karo, alle Damen, alle Buben und die Herz-Zehn sind Trumpf. Die Kreuz-Damen bilden Re gegen Kontra. | Verdeckte Parteien, Trumpfordnung quer zu den Farben, Wertung nach Augen, wahlweise erst am Ende ausgezählt |
 | **Freies Spiel** | Offener Tisch ohne Regeln: ziehen, ablegen, Zug von Hand weitergeben. | Vorlage für neue Regelwerke |
 
 Die vollständigen Regeln jedes Spiels stehen im Regelwerk selbst und werden auf
@@ -156,6 +156,26 @@ Optional stehen bereit:
 | `botMove(state, context, playerId)` | Taktik der KI-Spieler; ohne diesen Haken spielt der generische Bot |
 | `botActsOutOfTurn` | auch KI-Sitze fragen, die nicht am Zug sind (Zwischenrufe wie das Zweifeln bei Lügen) |
 
+Eigene Lobby-Optionen braucht kein Zutun der Runtime: Sie reicht die
+Raumeinstellungen als `context.settings` durch, ein Regelwerk liest daraus mit
+`readSetting(context, key, fallback)`. So funktioniert die Doppelkopf-Option
+„Augen laufend zählen oder erst am Ende".
+
+Ein Stapel wird als **Haufen** oder als **Auslage** gezeichnet. Der Haufen ist
+die Voreinstellung: `cards[0]` liegt oben, sichtbar sind höchstens drei, stark
+überlappend — richtig für Nachzieh- und Ablagestapel. Die Auslage
+(`layout: "spread"`) zeigt **alle** Karten in genau der Reihenfolge des Modells
+und nur leicht überlappend — richtig für einen Stich, der vollständig auf dem
+Tisch liegen soll. Die Kartenbreite richtet sich nach dem Platzbedarf aller
+Stapel zusammen, nicht nach ihrer Anzahl.
+
+Die drei Stichspiele legen den fertigen Stich nicht sofort weg: Er bleibt als
+zweiter Stapel **Letzter Stich · <Name>** offen liegen, bis der nächste Stich
+komplett ist. Ohne das wäre er in derselben Sekunde verschwunden, in der die
+letzte Karte fällt — man hätte nie gesehen, was gespielt wurde und wer ihn
+bekommen hat. Erst danach wandert er in eine unsichtbare Archivzone; die
+Wertung hängt ohnehin nicht am Kartenort, sondern an den Zählern in `extra`.
+
 Server-Runtime, Spieltisch und Handkarten bleiben unverändert. Eigene Zonen
 (Stiche, Auslagen, Farbreihen, verdeckte Stapel) legt man im Tischzustand an;
 sie erscheinen automatisch als weitere Stapel. Ein Zug darf aus mehreren
@@ -172,6 +192,7 @@ Zug sind: bei Lügen darf jeder zweifeln.
 - Handkarten: 3 bis 12 (Schwimmen spielt immer mit drei, die Stichwette mit
   einer Karte mehr pro Runde, Schwarzer Peter, Herzeln und Doppelkopf teilen
   das ganze Blatt aus)
+- Doppelkopf: Augen laufend zählen oder erst am Ende auszählen
 - KI-Spieler: 0 bis 5, gedeckelt auf sechs Sitze insgesamt
 - Kartenbild: Klassisch, Modern oder Klar
 
@@ -206,7 +227,8 @@ npm run dev:all
 - Doppelkopf kennt weder Ansagen (Re/Kontra) noch Solo oder Hochzeit; die
   Parteien stehen mit den Kreuz-Damen fest.
 - Herzeln schiebt vor der Runde keine Karten weiter.
-- Jeder Tischstapel zeigt auf dem Host höchstens drei Karten offen.
+- Ein Haufen (`layout: "pile"`) zeigt höchstens drei Karten offen; eine Auslage
+  (`layout: "spread"`) zeigt alle, wird dafür aber schmaler, je mehr es sind.
 - Der Host-Tisch ist auf Querformat ausgelegt; unter etwa 1000 px Breite wird es
   eng.
 - Die Denkpause der KI-Spieler ist fest (rund 1,2 Sekunden) und nicht einstellbar.

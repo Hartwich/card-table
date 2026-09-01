@@ -5,7 +5,8 @@ export const cardTableRoomSettingKeys = {
   deck: "cardTableDeck",
   handSize: "cardTableHandSize",
   cardStyle: "cardTableCardStyle",
-  botCount: "cardTableBotCount"
+  botCount: "cardTableBotCount",
+  doppelkopfScoring: "cardTableDoppelkopfScoring"
 } as const;
 
 export const cardTableManifest = {
@@ -112,6 +113,19 @@ export const cardTableManifest = {
         max: 12,
         step: 1,
         defaultValue: 5
+      },
+      {
+        kind: "select",
+        id: "doppelkopfScoring",
+        settingKey: cardTableRoomSettingKeys.doppelkopfScoring,
+        actionKey: "doppelkopfScoring",
+        label: "Doppelkopf: Augen",
+        description: "Nur für Doppelkopf. Laufend mitzählen oder erst am Ende auszählen, wie am echten Tisch.",
+        defaultValue: "live",
+        options: [
+          { id: "live", label: "Laufend zählen", description: "Jeder Stich zeigt seine Augen, der Sitzplatz den Stand." },
+          { id: "end", label: "Erst am Ende", description: "Während der Runde keine Zahlen - abgerechnet wird zum Schluss." }
+        ]
       },
       {
         kind: "number",

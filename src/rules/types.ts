@@ -64,6 +64,13 @@ export interface CardRulesetContext {
   now: number;
   playerNames: Record<string, string>;
   scores: Record<string, number>;
+  /**
+   * Die Raumeinstellungen aus dem Host-Setup, unverändert.
+   *
+   * Damit kann ein Regelwerk eigene Optionen anbieten, ohne dass die Runtime
+   * sie kennen muss - sie reicht nur durch. Lesen mit `readSetting`.
+   */
+  settings: Readonly<Record<string, unknown>>;
 }
 
 export interface CardPlayCheck {
@@ -224,6 +231,16 @@ export function playerName(context: CardRulesetContext, playerId: string): strin
 /** Ist dieser Sitz ein KI-Spieler? */
 export function isBotSeat(state: CardGameState, playerId: string): boolean {
   return state.bots.some((bot) => bot.id === playerId);
+}
+
+/** Liest eine eigene Lobby-Option des Regelwerks. */
+export function readSetting(
+  context: CardRulesetContext,
+  key: string,
+  fallback: string
+): string {
+  const value = context.settings[key];
+  return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
 /** Liest einen Zahlenwert aus dem regelwerkseigenen Ablageplatz. */

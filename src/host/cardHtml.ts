@@ -79,8 +79,26 @@ export function stackHtml(
           }).join("");
 
     body = `<div class="ct-stack-cards is-pile" style="width:${cardWidth}px;height:${cardHeight}px">${inner}</div>`;
+  } else if (stack.layout === "spread") {
+    // Auslage: Ein Stich liegt vollständig auf dem Tisch, in Spielreihenfolge
+    // von links nach rechts. Je mehr Karten, desto schmaler - sonst passt die
+    // Reihe irgendwann nicht mehr neben die anderen Stapel.
+    const scale = Math.min(1, Math.max(0.62, 3 / Math.max(1, stack.cards.length)));
+    const width = Math.round(cardWidth * scale);
+    const inner =
+      stack.cards.length === 0
+        ? emptySlotHtml(cardWidth)
+        : stack.cards
+            .map((card, index) => {
+              const shift = index === 0 ? 0 : Math.round(width * -0.18);
+              return `<span class="ct-fan" style="margin-left:${shift}px;z-index:${index + 1}">${cardFaceHtml(card, width, cardStyle)}</span>`;
+            })
+            .join("");
+
+    body = `<div class="ct-stack-cards">${inner}</div>`;
   } else {
-    // Oberste Karte zuerst im Modell, im DOM aber zuletzt - so liegt sie vorn.
+    // Haufen: Oberste Karte zuerst im Modell, im DOM aber zuletzt - so liegt
+    // sie vorn. Mehr als drei Lagen bringen optisch nichts.
     const ordered = stack.cards.slice(0, 3).reverse();
     const inner =
       ordered.length === 0

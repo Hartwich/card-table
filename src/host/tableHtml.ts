@@ -27,17 +27,33 @@ export function cardTableLabels(language?: CardTableLanguage) {
   };
 }
 
-/** Kartenbreite nach Anzahl der Stapel, damit die Reihe immer passt. */
-function cardWidthFor(stackCount: number): number {
-  if (stackCount <= 2) {
+/**
+ * Kartenbreite nach dem Platzbedarf der Stapel.
+ *
+ * Ein Haufen braucht eine Spalte, eine Auslage so viele, wie sie Karten zeigt -
+ * ein Vier-Karten-Stich ist deutlich breiter als ein Ablagestapel. Die Reihe
+ * soll auf einen Blick passen, statt umzubrechen.
+ */
+function cardWidthFor(stacks: CardTablePublicState["stacks"]): number {
+  const columns = stacks.reduce(
+    (sum, stack) =>
+      sum + (stack.layout === "spread" ? Math.max(1, stack.cards.length * 0.55) : 1),
+    0
+  );
+
+  if (columns <= 2) {
     return 200;
   }
 
-  if (stackCount === 3) {
+  if (columns <= 3) {
     return 176;
   }
 
-  return stackCount === 4 ? 152 : 128;
+  if (columns <= 4) {
+    return 152;
+  }
+
+  return columns <= 6 ? 128 : 108;
 }
 
 function seatHtml(
@@ -100,7 +116,7 @@ export function renderCardTableHtml(
   options: { rulesOpen?: boolean } = {}
 ): string {
   const text = cardTableLabels(language);
-  const cardWidth = cardWidthFor(state.stacks.length);
+  const cardWidth = cardWidthFor(state.stacks);
   const condition = state.conditionLabel
     ? `<span class="ct-chip">${escapeHtml(`${state.conditionSymbol ?? ""} ${state.conditionLabel}`.trim())}</span>`
     : "";

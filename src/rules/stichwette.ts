@@ -33,6 +33,8 @@ import {
 const trickZoneId = "stich";
 const trumpZoneId = "trumpf";
 const wonZoneId = "abgelegt";
+const lastTrickZoneId = "letzter-stich";
+const lastTrickWinnerKey = "lastTrickWinner";
 const deckSize = 60;
 
 const phaseKey = "phase";
@@ -68,6 +70,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     missed: "verfehlt die Ansage",
     wins: "holt den Durchgang.",
     trick: "Stich",
+    lastTrick: "Letzter Stich",
     waiting: "wartet"
   },
   en: {
@@ -90,6 +93,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     missed: "misses the bid",
     wins: "takes the deal.",
     trick: "Trick",
+    lastTrick: "Last trick",
     waiting: "waiting"
   }
 };
@@ -245,6 +249,7 @@ export const trickBetRuleset: CardRuleset = {
         zones: {
           ...state.table.zones,
           [trickZoneId]: [],
+          [lastTrickZoneId]: [],
           [trumpZoneId]: trumpCardId ? [trumpCardId] : [],
           [wonZoneId]: []
         }
@@ -467,8 +472,16 @@ export const trickBetRuleset: CardRuleset = {
     const played = trickCardIds(next);
     let cleared = next.table;
 
+    // Der vorige Stich hat lange genug offen gelegen - er wandert jetzt ins
+    // Archiv, damit der gerade fertige seinen Platz bekommt.
+    for (const archivedId of [...(cleared.zones[lastTrickZoneId] ?? [])]) {
+      cleared = moveCard(cleared, archivedId, { kind: "zone", zoneId: wonZoneId }, "bottom");
+    }
+
+    // Der fertige Stich bleibt sichtbar liegen, bis der nächste komplett ist.
+    // Sonst wäre er in derselben Sekunde weg, in der die letzte Karte fällt.
     for (const trickCardId of played) {
-      cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: wonZoneId }, "bottom");
+      cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: lastTrickZoneId }, "bottom");
     }
 
     const trickCount = readNumber(next, trickCountKey) + 1;
@@ -482,6 +495,7 @@ export const trickBetRuleset: CardRuleset = {
         {
           [tricksKey(winnerId)]: tricksOf(next, winnerId) + 1,
           [leadKey]: noLead,
+          [lastTrickWinnerKey]: winnerId,
           [trickLeaderKey]: winnerIndex,
           [trickCountKey]: trickCount
         }
@@ -594,8 +608,7 @@ export const trickBetRuleset: CardRuleset = {
         .map((card) => toCardFace(context.deck, card));
     const trumpFaces = faces(trumpZoneId);
     const trickFaces = faces(trickZoneId);
-
-    return [
+    const stacks: CardTableStackState[] = [
       {
         id: trumpZoneId,
         label: text.trump as string,
@@ -610,9 +623,35 @@ export const trickBetRuleset: CardRuleset = {
         kind: "zone",
         count: trickFaces.length,
         cards: trickFaces,
-        faceDown: false
+        faceDown: false,
+        layout: "spread"
       }
     ];
+
+    const lastCards = (state.table.zones[lastTrickZoneId] ?? [])
+      .map((cardId) => state.table.cards[cardId])
+      .filter((card): card is CardInstance => Boolean(card))
+      .map((card) => toCardFace(context.deck, card));
+
+    // Der zuletzt gewonnene Stich bleibt offen liegen, mit dem Namen dessen,
+    // der ihn bekommen hat - sonst wäre nie zu sehen, was gerade passiert ist.
+    if (lastCards.length > 0) {
+      const lastWinnerId = readText(state, lastTrickWinnerKey);
+
+      stacks.push({
+        id: lastTrickZoneId,
+        label: lastWinnerId
+          ? `${text.lastTrick} · ${playerName(context, lastWinnerId)}`
+          : (text.lastTrick as string),
+        kind: "zone",
+        count: lastCards.length,
+        cards: lastCards,
+        faceDown: false,
+        layout: "spread"
+      });
+    }
+
+    return stacks;
   },
 
   condition(state, context) {

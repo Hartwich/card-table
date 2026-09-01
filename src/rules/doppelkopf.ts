@@ -13,6 +13,7 @@ import {
   finishGame,
   playerName,
   readNumber,
+  readSetting,
   readText,
   withError,
   writeExtra,
@@ -34,6 +35,21 @@ import {
 
 const trickZoneId = "stich";
 const wonZoneId = "abgelegt";
+const lastTrickZoneId = "letzter-stich";
+const lastTrickWinnerKey = "lastTrickWinner";
+
+/**
+ * Augen laufend zeigen oder erst am Ende auszählen.
+ *
+ * Am echten Tisch rechnet niemand laut mit; die Option "end" bildet das ab und
+ * hält Stand, Stichwerte und den eigenen Zwischenstand bis zur Abrechnung
+ * zurück. Gezählt wird intern natürlich trotzdem.
+ */
+const scoringSettingKey = "cardTableDoppelkopfScoring";
+
+function countsLive(context: CardRulesetContext): boolean {
+  return readSetting(context, scoringSettingKey, "live") !== "end";
+}
 const leadKey = "leadKind";
 const trickLeaderKey = "trickLeaderIndex";
 const trickCountKey = "trickCount";
@@ -63,6 +79,8 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     kontraWins: "Kontra gewinnt mit",
     youAre: "Du spielst",
     trick: "Stich",
+    lastTrick: "Letzter Stich",
+    countedLater: "Augen werden am Ende gezählt",
     end: "Runde beenden",
     ended: "Der Host hat die Runde beendet."
   },
@@ -81,6 +99,8 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     kontraWins: "Kontra wins with",
     youAre: "You play",
     trick: "Trick",
+    lastTrick: "Last trick",
+    countedLater: "eyes are counted at the end",
     end: "End round",
     ended: "The host ended the round."
   }
@@ -256,7 +276,7 @@ export const doppelkopfRuleset: CardRuleset = {
       ...state,
       table: {
         ...state.table,
-        zones: { ...state.table.zones, [trickZoneId]: [], [wonZoneId]: [] }
+        zones: { ...state.table.zones, [trickZoneId]: [], [lastTrickZoneId]: [], [wonZoneId]: [] }
       },
       extra: { ...state.extra, ...counters }
     };
@@ -452,8 +472,16 @@ export const doppelkopfRuleset: CardRuleset = {
     }, 0);
     let cleared = next.table;
 
+    // Der vorige Stich hat lange genug offen gelegen - er wandert jetzt ins
+    // Archiv, damit der gerade fertige seinen Platz bekommt.
+    for (const archivedId of [...(cleared.zones[lastTrickZoneId] ?? [])]) {
+      cleared = moveCard(cleared, archivedId, { kind: "zone", zoneId: wonZoneId }, "bottom");
+    }
+
+    // Der fertige Stich bleibt sichtbar liegen, bis der nächste komplett ist.
+    // Sonst wäre er in derselben Sekunde weg, in der die letzte Karte fällt.
     for (const trickCardId of played) {
-      cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: wonZoneId }, "bottom");
+      cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: lastTrickZoneId }, "bottom");
     }
 
     const trickCount = readNumber(next, trickCountKey) + 1;
@@ -464,12 +492,13 @@ export const doppelkopfRuleset: CardRuleset = {
         {
           [pointsKey(winnerId)]: pointsOf(next, winnerId) + eyes,
           [leadKey]: noLead,
+          [lastTrickWinnerKey]: winnerId,
           [trickLeaderKey]: winnerIndex,
           [trickCountKey]: trickCount
         }
       ),
       playerName(context, winnerId),
-      `${text.takesTrick} (${eyes} ${text.eyes})`
+      countsLive(context) ? `${text.takesTrick} (${eyes} ${text.eyes})` : (text.takesTrick as string)
     );
 
     const cardsLeft = next.table.turnOrder.reduce(
@@ -518,16 +547,42 @@ export const doppelkopfRuleset: CardRuleset = {
       .filter((card): card is CardInstance => Boolean(card))
       .map((card) => toCardFace(context.deck, card));
 
-    return [
+    const stacks: CardTableStackState[] = [
       {
         id: trickZoneId,
         label: `${text.trick} ${readNumber(state, trickCountKey) + (cards.length > 0 ? 1 : 0)}`,
         kind: "zone",
         count: cards.length,
         cards,
-        faceDown: false
+        faceDown: false,
+        layout: "spread"
       }
     ];
+
+    const lastCards = (state.table.zones[lastTrickZoneId] ?? [])
+      .map((cardId) => state.table.cards[cardId])
+      .filter((card): card is CardInstance => Boolean(card))
+      .map((card) => toCardFace(context.deck, card));
+
+    // Der zuletzt gewonnene Stich bleibt offen liegen, mit dem Namen dessen,
+    // der ihn bekommen hat - sonst wäre nie zu sehen, was gerade passiert ist.
+    if (lastCards.length > 0) {
+      const lastWinnerId = readText(state, lastTrickWinnerKey);
+
+      stacks.push({
+        id: lastTrickZoneId,
+        label: lastWinnerId
+          ? `${text.lastTrick} · ${playerName(context, lastWinnerId)}`
+          : (text.lastTrick as string),
+        kind: "zone",
+        count: lastCards.length,
+        cards: lastCards,
+        faceDown: false,
+        layout: "spread"
+      });
+    }
+
+    return stacks;
   },
 
   condition() {
@@ -537,14 +592,22 @@ export const doppelkopfRuleset: CardRuleset = {
   privateNote(state, context, playerId) {
     const text = words(context);
     const party = isReParty(state, playerId) ? text.re : text.kontra;
+    const tail = countsLive(context)
+      ? `${pointsOf(state, playerId)} ${text.eyes}`
+      : (text.countedLater as string);
 
-    return `${text.youAre} ${party} · ${pointsOf(state, playerId)} ${text.eyes}`;
+    return `${text.youAre} ${party} · ${tail}`;
   },
 
   seatStatus(state, context, playerId) {
     const text = words(context);
-    // Die Parteien bleiben verdeckt, bis abgerechnet wird.
+    // Die Parteien bleiben verdeckt, bis abgerechnet wird - und wer erst am
+    // Ende auszählen lässt, sieht bis dahin auch keine Augen.
     if (!state.gameOver) {
+      if (!countsLive(context)) {
+        return undefined;
+      }
+
       const points = pointsOf(state, playerId);
       return points > 0 ? `${points}` : undefined;
     }
