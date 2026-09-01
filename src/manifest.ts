@@ -3,14 +3,16 @@ import type { GameManifest } from "@open-party-lab/game-core";
 export const cardTableRoomSettingKeys = {
   ruleset: "cardTableRuleset",
   deck: "cardTableDeck",
-  handSize: "cardTableHandSize"
+  handSize: "cardTableHandSize",
+  cardStyle: "cardTableCardStyle",
+  botCount: "cardTableBotCount"
 } as const;
 
 export const cardTableManifest = {
   id: "card-table",
   displayName: "Kartentisch",
   description:
-    "Gemeinsamer Spieltisch für Kartenspiele mit Mau-Mau, Schwimmen, Wizard, Elfer raus und freiem Spiel.",
+    "Gemeinsamer Spieltisch für zehn Kartenspiele: Mau-Mau, Schwimmen, Stichwette, Zahlenreihe, Lügen, Schwarzer Peter, Fischen, Herzeln, Doppelkopf und freies Spiel.",
   minPlayers: 2,
   maxPlayers: 6,
   hostView: "CardTableHostScene",
@@ -42,14 +44,39 @@ export const cardTableManifest = {
             description: "Drei Karten, drei offene Tischkarten, tauschen und klopfen. Drei Leben pro Person."
           },
           {
-            id: "wizard",
-            label: "Wizard",
-            description: "Stiche ansagen und treffen. Eigenes Blatt, steigende Kartenzahl je Runde."
+            id: "stichwette",
+            label: "Stichwette",
+            description: "Stiche ansagen und genau treffen. Eigenes Blatt mit Kronen und Federn, steigende Kartenzahl je Runde."
           },
           {
-            id: "elfer-raus",
-            label: "Elfer raus",
-            description: "Vier Farbreihen von 1 bis 20, eröffnet mit der Elf. Eigenes Zahlenblatt."
+            id: "zahlenreihe",
+            label: "Zahlenreihe",
+            description: "Vier Farbreihen von 1 bis 20, jede eröffnet mit der Elf. Eigenes Zahlenblatt."
+          },
+          {
+            id: "luegen",
+            label: "Lügen",
+            description: "Verdeckt ablegen und den geforderten Wert ansagen. Wer anzweifelt und daneben liegt, nimmt den Stapel."
+          },
+          {
+            id: "schwarzer-peter",
+            label: "Schwarzer Peter",
+            description: "Paare ablegen und beim Nachbarn ziehen. Wer die Karte ohne Partner behält, verliert."
+          },
+          {
+            id: "fischen",
+            label: "Fischen",
+            description: "Mitspieler nach einem Wert fragen und Quartette sammeln. Familientauglich."
+          },
+          {
+            id: "herzeln",
+            label: "Herzeln",
+            description: "Stiche vermeiden: Jedes Herz zählt einen Strafpunkt, die Pik-Dame dreizehn."
+          },
+          {
+            id: "doppelkopf",
+            label: "Doppelkopf",
+            description: "Für vier Personen: Karo, Damen, Buben und Herz-Zehn sind Trumpf, die Kreuz-Damen bilden Re."
           },
           {
             id: "free-play",
@@ -64,7 +91,7 @@ export const cardTableManifest = {
         settingKey: cardTableRoomSettingKeys.deck,
         actionKey: "deck",
         label: "Kartendeck",
-        description: "Gilt für Mau-Mau, Schwimmen und Freies Spiel. Wizard und Elfer raus bringen ihr eigenes Blatt mit.",
+        description: "Gilt für Mau-Mau, Schwimmen, Lügen, Fischen und Freies Spiel. Die anderen Regelwerke bringen ihr eigenes Blatt mit.",
         defaultValue: "french-52",
         options: [
           { id: "french-52", label: "Französisch (52)", description: "Pik, Herz, Karo, Kreuz von 2 bis Ass." },
@@ -80,11 +107,37 @@ export const cardTableManifest = {
         settingKey: cardTableRoomSettingKeys.handSize,
         actionKey: "handSize",
         label: "Handkarten",
-        description: "Karten pro Spieler beim Austeilen. Schwimmen spielt immer mit drei, Wizard mit einer Karte mehr pro Runde.",
+        description: "Karten pro Spieler beim Austeilen. Schwimmen spielt immer mit drei, die Stichwette mit einer Karte mehr pro Runde.",
         min: 3,
         max: 12,
         step: 1,
         defaultValue: 5
+      },
+      {
+        kind: "number",
+        id: "botCount",
+        settingKey: cardTableRoomSettingKeys.botCount,
+        actionKey: "botCount",
+        label: "KI-Spieler",
+        description:
+          "Virtuelle Mitspieler, die der Tisch selbst steuert. Sie füllen bis zu sechs Plätze auf und spielen nach demselben Regelwerk.",
+        min: 0,
+        max: 5,
+        step: 1,
+        defaultValue: 0
+      },
+      {
+        kind: "select",
+        id: "cardStyle",
+        settingKey: cardTableRoomSettingKeys.cardStyle,
+        actionKey: "cardStyle",
+        label: "Kartenbild",
+        defaultValue: "classic",
+        options: [
+          { id: "classic", label: "Klassisch", description: "Weißes Blatt mit Serifen, Ecken und Pips." },
+          { id: "modern", label: "Modern", description: "Farbiges Feld, große Ziffer, weit lesbar." },
+          { id: "clear", label: "Klar", description: "Sehr reduziert: riesige Zahl, kleines Zeichen." }
+        ]
       }
     ]
   },
@@ -96,7 +149,7 @@ export const cardTableManifest = {
     scoreboardMs: 5_000
   },
   ownsScreens: ["round_intro", "result"],
-  visual: { accent: "#8d5f4a", eyebrow: "Karten" },
+  visual: { accent: "#8d5f4a", icon: "cards", eyebrow: "Karten" },
   audio: { track: { profile: "gentle", bpm: 96, rootMidi: 53, masterGain: 0.11 } },
   controllerChrome: { bare: true }
 } as const satisfies GameManifest;

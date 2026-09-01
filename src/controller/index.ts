@@ -1,4 +1,5 @@
 import type { CardBackStyle, CardColor } from "../cards/cardTypes.js";
+import type { CardTableCardStyle } from "../protocol.js";
 import type {
   CardTableActionState,
   CardTableChoiceState,
@@ -33,6 +34,7 @@ interface CardHandLayoutModel {
   resetKey: string;
   deckLabel: string;
   backStyle: CardBackStyle;
+  cardStyle: CardTableCardStyle;
   hand: CardTableHandCardState[];
   stacks: CardTableStackState[];
   seats: CardTableSeatState[];
@@ -109,6 +111,7 @@ export function buildCardTableControllerModel(
     ].join(":"),
     deckLabel: gameState.deckLabel ?? "",
     backStyle: gameState.backStyle ?? "classic",
+    cardStyle: gameState.cardStyle ?? "classic",
     hand: gameState.hand ?? [],
     stacks: gameState.stacks ?? [],
     seats: gameState.seats ?? [],

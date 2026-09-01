@@ -3,10 +3,12 @@ import type {
   CardTableActionState,
   CardTableChoiceState,
   CardTableLogEntryState,
+  CardTableRuleSectionState,
   CardTableStackState
 } from "../protocol.js";
 import type { CardTableState } from "../cards/cardTable.js";
 import type { CardColor, DeckDefinition } from "../cards/cardTypes.js";
+import type { CardBotSeat } from "../bots/botSeats.js";
 
 /**
  * Der Rundenzustand eines Kartenspiels.
@@ -35,7 +37,26 @@ export interface CardGameState extends BaseRoundState {
   lastError?: string;
   /** Freier Ablageplatz für regelwerkseigene Werte. */
   extra: Record<string, number | string | boolean | null>;
+  /** Virtuelle KI-Sitze dieser Runde, in Zugreihenfolge. */
+  bots: CardBotSeat[];
+  /** Punktestand der KI-Sitze - die Plattform zählt nur echte Spieler. */
+  botScores: Record<string, number>;
+  /** Zeitpunkt, an dem der nächste KI-Zug fällig ist. */
+  botReadyAt: number | null;
 }
+
+/**
+ * Was ein KI-Spieler tun möchte.
+ *
+ * Absichten, keine Zustandsänderungen: Der Antrieb schickt sie durch dieselben
+ * Regelpfade wie den Input eines echten Spielers, damit kein Bot an den Regeln
+ * vorbeispielen kann.
+ */
+export type CardBotIntent =
+  | { kind: "play"; cardId: string; choiceId?: string }
+  | { kind: "draw" }
+  | { kind: "action"; actionId: string }
+  | { kind: "wait" };
 
 export interface CardRulesetContext {
   deck: DeckDefinition;
@@ -74,7 +95,7 @@ export interface CardRuleset {
   fixedDeckId?: string;
   /** Schränkt die Deckauswahl ein, wenn mehrere Decks passen. */
   allowedDeckIds?: string[];
-  /** Handkarten dieser Runde, z. B. steigend wie bei Wizard. */
+  /** Handkarten dieser Runde, z. B. steigend wie bei der Stichwette. */
   handSizeFor?(input: { roundNumber: number; playerCount: number; configured: number }): number;
   /** Zusätzlicher Aufbau nach dem Austeilen, z. B. Trumpf oder offene Tischkarten. */
   setupRound?(state: CardGameState, context: CardRulesetContext): CardGameState;
@@ -87,6 +108,12 @@ export interface CardRuleset {
     playerId: string
   ): string | undefined;
   introMessage(context: CardRulesetContext): string;
+  /**
+   * Die vollständigen Spielregeln. Der Host blendet sie auf Knopfdruck ein,
+   * deshalb gehören hier alle Fragen hinein, die am Tisch aufkommen: Ziel,
+   * Zugablauf, was angelegt werden darf, Sonderkarten und Wertung.
+   */
+  rules(context: CardRulesetContext): CardTableRuleSectionState[];
   canPlayCard(
     state: CardGameState,
     context: CardRulesetContext,
@@ -132,6 +159,20 @@ export interface CardRuleset {
   ): string | undefined;
   isFinished(state: CardGameState): boolean;
   buildScore(state: CardGameState): ScoreEntry[];
+  /**
+   * Zug eines KI-Spielers. Ohne diesen Haken übernimmt der generische Bot aus
+   * `bots/fallback.ts` - der spielt regelkonform, aber ohne Taktik.
+   */
+  botMove?(
+    state: CardGameState,
+    context: CardRulesetContext,
+    playerId: string
+  ): CardBotIntent | null;
+  /**
+   * Setzt das Regelwerk auf true, werden auch KI-Spieler gefragt, die nicht am
+   * Zug sind - etwa zum Zweifeln bei Lügen.
+   */
+  botActsOutOfTurn?: boolean;
 }
 
 export function appendLog(
@@ -178,6 +219,11 @@ export function finishGame(
 
 export function playerName(context: CardRulesetContext, playerId: string): string {
   return context.playerNames[playerId] ?? playerId;
+}
+
+/** Ist dieser Sitz ein KI-Spieler? */
+export function isBotSeat(state: CardGameState, playerId: string): boolean {
+  return state.bots.some((bot) => bot.id === playerId);
 }
 
 /** Liest einen Zahlenwert aus dem regelwerkseigenen Ablageplatz. */

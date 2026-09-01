@@ -189,60 +189,100 @@ export const party40Deck: DeckDefinition = createCustomDeck({
 });
 
 
-const elferSuits: CardSuitDefinition[] = [
+const numberSuits: CardSuitDefinition[] = [
   { id: "rot", symbol: "◆", label: "Rot", color: "red" },
   { id: "gelb", symbol: "●", label: "Gelb", color: "yellow" },
   { id: "gruen", symbol: "■", label: "Grün", color: "green" },
   { id: "blau", symbol: "▲", label: "Blau", color: "blue" }
 ];
 
-const elferRanks: CardRankDefinition[] = Array.from({ length: 20 }, (_, index) => ({
+const numberRanks: CardRankDefinition[] = Array.from({ length: 20 }, (_, index) => ({
   id: `${index + 1}`,
   label: `${index + 1}`,
   order: index + 1,
   points: index + 1
 }));
 
-export const wizardRank: CardRankDefinition = {
-  id: "wizard",
-  label: "Z",
+/** Sticht jede andere Karte. */
+export const crownRank: CardRankDefinition = {
+  id: "crown",
+  label: "♛",
   order: 100,
-  centerLabel: "ZAUBERER",
-  symbol: "✦",
-  color: "blue"
+  centerLabel: "KRONE",
+  symbol: "♛",
+  color: "yellow"
 };
 
-export const jesterRank: CardRankDefinition = {
-  id: "jester",
-  label: "N",
+/** Verliert jeden Stich. */
+export const featherRank: CardRankDefinition = {
+  id: "feather",
+  label: "❦",
   order: 0,
-  centerLabel: "NARR",
-  symbol: "✿",
+  centerLabel: "FEDER",
+  symbol: "❦",
   color: "green"
 };
 
-/** Wizard-Blatt: 52 Karten plus vier Zauberer und vier Narren. */
-export const wizard60Deck: DeckDefinition = {
-  id: "wizard-60",
-  label: "Wizard-Blatt (60)",
+/** Stichwette-Blatt: 52 Karten plus vier Kronen und vier Federn. */
+export const trickBet60Deck: DeckDefinition = {
+  id: "stichwette-60",
+  label: "Stichwette-Blatt (60)",
   suits: frenchSuits,
-  ranks: [...frenchRanks, wizardRank, jesterRank],
+  ranks: [...frenchRanks, crownRank, featherRank],
   cards: [
     ...buildFullDeck(frenchSuits, frenchRanks),
-    { id: "wizard", suitId: null, rankId: "wizard", copies: 4, tags: ["wizard"] },
-    { id: "jester", suitId: null, rankId: "jester", copies: 4, tags: ["jester"] }
+    { id: "crown", suitId: null, rankId: "crown", copies: 4, tags: ["crown"] },
+    { id: "feather", suitId: null, rankId: "feather", copies: 4, tags: ["feather"] }
   ],
   backStyle: "classic"
 };
 
 /** Vier Farbreihen von 1 bis 20 für Anlegespiele. */
-export const elfer80Deck: DeckDefinition = createCustomDeck({
-  id: "elfer-80",
+export const numbers80Deck: DeckDefinition = createCustomDeck({
+  id: "zahlen-80",
   label: "Zahlenblatt 1-20 (80)",
-  suits: elferSuits,
-  ranks: elferRanks,
+  suits: numberSuits,
+  ranks: numberRanks,
   backStyle: "grid"
 });
+
+/** Die einzelne Karte ohne Partner. */
+export const peterRank: CardRankDefinition = {
+  id: "peter",
+  label: "P",
+  order: 99,
+  centerLabel: "PETER",
+  symbol: "♠",
+  color: "black"
+};
+
+const withoutQueens = frenchRanks.filter((rank) => rank.id !== "queen");
+
+/** 24 Paare plus die eine Karte, die niemand haben will. */
+export const peter49Deck: DeckDefinition = {
+  id: "peter-49",
+  label: "Peter-Blatt (49)",
+  suits: frenchSuits,
+  ranks: [...withoutQueens, peterRank],
+  cards: [
+    ...buildFullDeck(frenchSuits, withoutQueens),
+    { id: "peter", suitId: null, rankId: "peter", copies: 1, tags: ["peter"] }
+  ],
+  backStyle: "classic"
+};
+
+const doppelkopfRankIds = ["9", "10", "jack", "queen", "king", "ace"];
+const doppelkopfRanks = frenchRanks.filter((rank) => doppelkopfRankIds.includes(rank.id));
+
+/** Neun bis Ass, jede Karte doppelt. */
+export const doppelkopf48Deck: DeckDefinition = {
+  id: "doppelkopf-48",
+  label: "Doppelkopf-Blatt (48)",
+  suits: frenchSuits,
+  ranks: doppelkopfRanks,
+  cards: buildFullDeck(frenchSuits, doppelkopfRanks).map((card) => ({ ...card, copies: 2 })),
+  backStyle: "diamond"
+};
 
 export interface CardDeckOption {
   id: string;
@@ -263,12 +303,14 @@ export const defaultCardDeckId = french52Deck.id;
 
 /**
  * Alle bekannten Decks, auch die, die nicht im Host-Setup zur Auswahl stehen.
- * Regelwerke mit festem Deck (Wizard, Elfer raus) greifen hierauf zu.
+ * Regelwerke mit festem Deck (Stichwette, Zahlenreihe) greifen hierauf zu.
  */
 export const allCardDecks: DeckDefinition[] = [
   ...cardDeckOptions.map((option) => option.deck),
-  wizard60Deck,
-  elfer80Deck
+  trickBet60Deck,
+  numbers80Deck,
+  peter49Deck,
+  doppelkopf48Deck
 ];
 
 export function resolveCardDeck(deckId: string | null | undefined): DeckDefinition {

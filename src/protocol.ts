@@ -47,6 +47,8 @@ export interface CardTableSeatState {
   handCount: number;
   score: number;
   isActive: boolean;
+  /** Virtueller Mitspieler statt eines Handys. */
+  isBot?: boolean;
   /** Kurzer Zustand am Sitzplatz, z. B. "Mau!". */
   statusLabel?: string;
 }
@@ -74,11 +76,19 @@ export interface CardTableChoiceState {
   options: CardTableChoiceOptionState[];
 }
 
+/** Ein Abschnitt der Spielregeln, wie ihn der Host einblendet. */
+export interface CardTableRuleSectionState {
+  title: string;
+  lines: string[];
+}
+
 export interface CardTableLogEntryState {
   id: string;
   playerName: string | null;
   text: string;
 }
+
+export type CardTableCardStyle = "classic" | "modern" | "clear";
 
 export interface CardTablePublicState {
   /** Aktives Regelwerk, z. B. "free-play" oder "mau-mau". */
@@ -86,6 +96,10 @@ export interface CardTablePublicState {
   title: string;
   deckLabel: string;
   backStyle: CardBackStyle;
+  /** Kartenbild, das Host und Handy gemeinsam verwenden. */
+  cardStyle: CardTableCardStyle;
+  /** Ausführliche Spielregeln, die der Host auf Knopfdruck zeigt. */
+  rules: CardTableRuleSectionState[];
   seats: CardTableSeatState[];
   stacks: CardTableStackState[];
   activePlayerId: string | null;
@@ -146,6 +160,8 @@ export interface CardTableConfigureLobbyAction {
   ruleset?: string;
   deck?: string;
   handSize?: number;
+  cardStyle?: string;
+  botCount?: number;
 }
 
 export type CardTableHostAction = CardTableHostActionMessage | CardTableConfigureLobbyAction;

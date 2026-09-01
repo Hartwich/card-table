@@ -5,7 +5,11 @@
 - Der Server ist autoritativ. Regeln, Zugreihenfolge und Sieg gehören in
   `src/rules/*` und `src/server/index.ts`.
 - Der Host zeichnet nur, was im `CardTablePublicState` steht. Keine
-  Spiellogik in `src/host`.
+  Spiellogik in `src/host`. Der Tisch ist ein DOM-Overlay: `tableHtml.ts` baut
+  reines Markup (ohne Phaser, damit einzeln testbar), `index.ts` hängt es in die
+  Seite und hört auf den Raumzustand.
+- Tischkarten und Stapel gehören auf den Host, nicht auf das Handy. Der
+  Controller zeigt Handkarten und Aktionen.
 - Der Controller schickt Absichten (`card-table:play`, `card-table:draw`,
   `card-table:action`) und entscheidet nichts selbst.
 - `src/cards/*` ist regelfrei: Deck, Stapel, Hände, Zugreihenfolge,
@@ -19,12 +23,42 @@
 4. `npm run typecheck` und `npm run build`.
 
 Vorlagen: `freePlay.ts` ist der kleinste Fall, `mauMau.ts` zeigt Sonderkarten,
-`schwimmen.ts` offene Tischzonen und Auswahl beim Legen, `wizard.ts` mehrere
-Phasen und eine echte Wertung, `elferRaus.ts` mehrere Ablagereihen.
+`schwimmen.ts` offene Tischzonen und Auswahl beim Legen, `stichwette.ts` mehrere
+Phasen und eine echte Wertung, `zahlenreihe.ts` mehrere Ablagereihen und einen
+Zug aus mehreren Aktionen, `luegen.ts` einen verdeckten Stapel und Aktionen fuer
+Spieler, die nicht am Zug sind, `schwarzerPeter.ts` blindes Ziehen aus einer
+fremden Hand, `fischen.ts` eine Rueckfrage mit Spielerliste, `herzeln.ts`
+Bedienzwang und negative Wertung, `doppelkopf.ts` verdeckte Parteien und eine
+Trumpfordnung quer zu den Farben.
+
+Jedes Regelwerk liefert über `rules()` seinen vollständigen Regeltext in DE und
+EN. Der Host blendet ihn auf Knopfdruck ein - dort gehört alles hinein, was am
+Tisch gefragt wird, nicht nur eine Kurzfassung.
+
+Namen und Karten sind eigenständig zu halten: keine geschützten Spieltitel und
+keine übernommenen Kartenbezeichnungen.
 
 Optionale Haken statt Sonderfällen in der Runtime: `fixedDeckId`,
 `allowedDeckIds`, `handSizeFor`, `setupRound`, `tableStacks`, `choiceForCard`,
-`privateNote`, `condition`, `seatStatus`.
+`privateNote`, `condition`, `seatStatus`, `botMove`, `botActsOutOfTurn`.
+
+## KI-Spieler
+
+- KI-Sitze gehören dem Kartentisch, nicht der Plattform. Ihre Ids tragen das
+  Präfix aus `bots/botSeats.ts`; `handleInput` weist Eingaben mit einer Bot-Id
+  grundsätzlich ab.
+- Ein Bot liefert nur eine **Absicht** (`CardBotIntent`). Der Antrieb in
+  `bots/driver.ts` schickt sie durch dieselben `playCard`/`drawCard`/`runAction`
+  wie den Input eines Handys. Nie einen Sonderweg für Bots einbauen - was ein
+  Bot darf, muss auch ein Mensch dürfen.
+- `botMove` gehört in die Datei des Regelwerks, direkt neben seine Regeln. Ohne
+  den Haken übernimmt `bots/fallback.ts`.
+- Zufall in einer Heuristik muss stabil sein: Der Antrieb fragt jeden Tick neu,
+  ein echter Würfel würde eine seltene Entscheidung deshalb trotzdem irgendwann
+  auslösen. Dafür gibt es `stableChance` in `bots/tactics.ts`.
+- Ein Bot darf nur wissen, was am Tisch liegt und was er selbst hält. Verdeckte
+  Informationen aus `extra` - fremde Parteien, fremde Hände - bleiben tabu, auch
+  wenn der Zustand sie hergibt.
 
 Erst eine neue Layout-Variante bauen, wenn das `card_hand`-Layout die
 Interaktion wirklich nicht abbildet - es gehört der Plattform und wird von

@@ -3,20 +3,28 @@ import { cardColorPalette, type CardBackStyle, type CardFace } from "./cardTypes
 /**
  * Kartenbilder als SVG.
  *
- * Der Host lädt daraus Phaser-Texturen, damit die Karten auf dem großen
- * Bildschirm gestochen scharf skalieren. Der Controller rendert dasselbe
- * Kartenmodell mit eigenem SVG in React.
+ * Drei Stile teilen sich denselben Rahmen und dasselbe Kartenmodell:
+ * "classic" ist das gewohnte Blatt mit Serifen und Pips, "modern" ein farbiges
+ * Feld für gute Lesbarkeit aus der Entfernung, "clear" reduziert auf eine große
+ * Zahl. Host und Handy rendern denselben Stil, damit Tisch und Hand
+ * zusammenpassen.
  */
+
+export type CardArtStyle = "classic" | "modern" | "clear";
 
 export interface CardSvgOptions {
   width?: number;
   height?: number;
   selected?: boolean;
   muted?: boolean;
+  style?: CardArtStyle;
 }
 
 const defaultWidth = 300;
 const defaultHeight = 420;
+
+const serifStack = "Georgia, 'Iowan Old Style', 'Times New Roman', serif";
+const sansStack = "Inter, ui-sans-serif, -apple-system, 'Segoe UI', sans-serif";
 
 const pipLayouts: Record<number, Array<[number, number]>> = {
   1: [[0.5, 0.5]],
@@ -55,31 +63,39 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-const serifStack = "Georgia, 'Iowan Old Style', 'Times New Roman', serif";
-
-function corner(face: CardFace, ink: string, width: number, height: number, rotate: boolean): string {
+/** Rang und Zeichen in einer Ecke, einmal aufrecht und einmal gedreht. */
+function corners(
+  face: CardFace,
+  color: string,
+  width: number,
+  height: number,
+  font: string,
+  scale = 1
+): string {
   const x = width * 0.135;
   const y = height * 0.115;
-  const transform = rotate ? ` transform="rotate(180 ${width / 2} ${height / 2})"` : "";
-
-  return `<g${transform}>
-    <text x="${x}" y="${y}" font-family="${serifStack}" font-size="${width * 0.18}" font-weight="600" fill="${ink}" text-anchor="middle">${escapeXml(face.rankLabel)}</text>
-    <text x="${x}" y="${y + width * 0.15}" font-family="${serifStack}" font-size="${width * 0.14}" fill="${ink}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>
+  const block = `<g>
+    <text x="${x}" y="${y}" font-family="${font}" font-size="${width * 0.18 * scale}" font-weight="600" fill="${color}" text-anchor="middle">${escapeXml(face.rankLabel)}</text>
+    <text x="${x}" y="${y + width * 0.15 * scale}" font-family="${font}" font-size="${width * 0.13 * scale}" fill="${color}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>
   </g>`;
+
+  return `${block}<g transform="rotate(180 ${width / 2} ${height / 2})">${block}</g>`;
 }
 
-function centerArtwork(face: CardFace, ink: string, accent: string, width: number, height: number): string {
+function classicBody(face: CardFace, ink: string, accent: string, width: number, height: number): string {
+  const frame = `<rect x="${width * 0.055}" y="${height * 0.04}" width="${width * 0.89}" height="${height * 0.92}" rx="${width * 0.05}" fill="none" stroke="${ink}" stroke-opacity="0.14" stroke-width="${width * 0.007}" />`;
+
   if (face.centerLabel) {
-    return `<g>
+    return `${frame}
       <circle cx="${width / 2}" cy="${height / 2}" r="${width * 0.29}" fill="${accent}" />
       <text x="${width / 2}" y="${height / 2 + width * 0.055}" font-family="${serifStack}" font-size="${width * 0.15}" font-weight="600" fill="${ink}" text-anchor="middle">${escapeXml(face.centerLabel)}</text>
-    </g>`;
+      ${corners(face, ink, width, height, serifStack)}`;
   }
 
   const pips = cardPipLayout(face.rankLabel);
 
   if (pips) {
-    return pips
+    const marks = pips
       .map(([px, py]) => {
         const cx = width * px;
         const cy = height * (0.17 + py * 0.66);
@@ -88,31 +104,56 @@ function centerArtwork(face: CardFace, ink: string, accent: string, width: numbe
         return `<text x="${cx}" y="${cy + width * 0.06}"${flip} font-family="${serifStack}" font-size="${width * 0.18}" fill="${ink}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>`;
       })
       .join("");
+
+    return `${frame}${marks}${corners(face, ink, width, height, serifStack)}`;
   }
 
-  return `<g>
+  return `${frame}
     <rect x="${width * 0.19}" y="${height * 0.19}" width="${width * 0.62}" height="${height * 0.62}" rx="${width * 0.05}" fill="${accent}" stroke="${ink}" stroke-opacity="0.35" stroke-width="${width * 0.008}" />
     <text x="${width / 2}" y="${height * 0.5 + width * 0.1}" font-family="${serifStack}" font-size="${width * 0.32}" font-weight="600" fill="${ink}" text-anchor="middle">${escapeXml(face.rankLabel)}</text>
     <text x="${width / 2}" y="${height * 0.72}" font-family="${serifStack}" font-size="${width * 0.14}" fill="${ink}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>
-  </g>`;
+    ${corners(face, ink, width, height, serifStack)}`;
+}
+
+function modernBody(face: CardFace, ink: string, width: number, height: number): string {
+  const paper = "#fffbf4";
+
+  return `<rect x="${width * 0.06}" y="${height * 0.045}" width="${width * 0.88}" height="${height * 0.91}" rx="${width * 0.055}" fill="${ink}" />
+    <circle cx="${width / 2}" cy="${height * 0.5}" r="${width * 0.26}" fill="${paper}" fill-opacity="0.92" />
+    <text x="${width / 2}" y="${height * 0.5 + width * 0.13}" font-family="${sansStack}" font-size="${width * 0.34}" font-weight="700" fill="${ink}" text-anchor="middle">${escapeXml(face.centerLabel ? face.suitSymbol : face.rankLabel)}</text>
+    <text x="${width / 2}" y="${height * 0.83}" font-family="${sansStack}" font-size="${width * 0.11}" font-weight="600" fill="${paper}" fill-opacity="0.92" text-anchor="middle" letter-spacing="${width * 0.01}">${escapeXml(face.centerLabel ?? face.suitLabel)}</text>
+    ${corners(face, paper, width, height, sansStack, 0.95)}`;
+}
+
+function clearBody(face: CardFace, ink: string, width: number, height: number): string {
+  const label = face.centerLabel ?? face.rankLabel;
+  const long = label.length > 2;
+
+  return `<text x="${width / 2}" y="${height * 0.5 + width * (long ? 0.11 : 0.18)}" font-family="${sansStack}" font-size="${width * (long ? 0.22 : 0.52)}" font-weight="700" fill="${ink}" text-anchor="middle">${escapeXml(label)}</text>
+    <text x="${width * 0.16}" y="${height * 0.15}" font-family="${sansStack}" font-size="${width * 0.16}" fill="${ink}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>
+    <text x="${width * 0.84}" y="${height * 0.9}" font-family="${sansStack}" font-size="${width * 0.16}" fill="${ink}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>`;
 }
 
 /** Rendert eine Spielkarte als eigenständiges SVG-Dokument. */
 export function renderCardFaceSvg(face: CardFace, options: CardSvgOptions = {}): string {
   const width = options.width ?? defaultWidth;
   const height = options.height ?? defaultHeight;
+  const style = options.style ?? "classic";
   const palette = cardColorPalette[face.color] ?? cardColorPalette.neutral;
   const ink = options.muted ? "#9aa1a6" : palette.ink;
   const accent = options.muted ? "#eceae6" : palette.accent;
   const border = options.selected ? "#6e8b74" : "#ded5c7";
   const borderWidth = options.selected ? width * 0.03 : width * 0.012;
+  const body =
+    style === "modern"
+      ? modernBody(face, ink, width, height)
+      : style === "clear"
+        ? clearBody(face, ink, width, height)
+        : classicBody(face, ink, accent, width, height);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <rect x="${borderWidth / 2}" y="${borderWidth / 2}" width="${width - borderWidth}" height="${height - borderWidth}" rx="${width * 0.07}" fill="#fffbf4" stroke="${border}" stroke-width="${borderWidth}" />
-  <rect x="${width * 0.055}" y="${height * 0.04}" width="${width * 0.89}" height="${height * 0.92}" rx="${width * 0.05}" fill="none" stroke="${ink}" stroke-opacity="0.14" stroke-width="${width * 0.007}" />
-  ${centerArtwork(face, ink, accent, width, height)}
-  ${corner(face, ink, width, height, false)}
-  ${corner(face, ink, width, height, true)}
+  ${body}
 </svg>`;
 }
 
@@ -141,12 +182,12 @@ export function renderCardBackSvg(
 </svg>`;
 }
 
-/** Data-URI für <img>-Tags und Phaser-Texturen. */
+/** Data-URI für <img>-Tags. */
 export function cardSvgToDataUri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-/** Stabiler Texturschlüssel je Kartenbild. */
+/** Stabiler Schlüssel je Kartenbild. */
 export function cardFaceTextureKey(face: CardFace, prefix = "card-table"): string {
   return `${prefix}:${face.color}:${face.rankLabel}:${face.suitSymbol}`;
 }

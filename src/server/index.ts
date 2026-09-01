@@ -7,10 +7,13 @@ import {
   type ServerGameContext
 } from "@open-party-lab/game-core";
 import { createCardTable, handOf, toCardFace, toCardFaces } from "../cards/cardTable.js";
+import { createBotSeats, isBotId, maxBotSeats, type CardBotSeat } from "../bots/botSeats.js";
+import { driveBots } from "../bots/driver.js";
 import { countDeckCards, resolveCardDeck } from "../cards/deckPresets.js";
 import type { DeckDefinition } from "../cards/cardTypes.js";
 import { cardTableManifest, cardTableRoomSettingKeys } from "../manifest.js";
 import type {
+  CardTableCardStyle,
   CardTableCardState,
   CardTableConfigureLobbyAction,
   CardTableControllerState,
@@ -62,7 +65,15 @@ function resolveDeck(context: ServerGameContext, ruleset: CardRuleset): DeckDefi
   return resolveCardDeck(allowed ? requested : ruleset.defaultDeckId);
 }
 
-function resolveHandSize(context: ServerGameContext, ruleset: CardRuleset): number {
+const cardStyles: CardTableCardStyle[] = ["classic", "modern", "clear"];
+
+function resolveCardStyle(context: ServerGameContext): CardTableCardStyle {
+  const configured = readSetting(context, cardTableRoomSettingKeys.cardStyle);
+
+  return cardStyles.find((style) => style === configured) ?? "classic";
+}
+
+function resolveHandSize(context: ServerGameContext, ruleset: CardRuleset, seatCount: number): number {
   const setting = readSetting(context, cardTableRoomSettingKeys.handSize);
   const configured = Math.max(
     minHandSize,
@@ -77,10 +88,63 @@ function resolveHandSize(context: ServerGameContext, ruleset: CardRuleset): numb
     1,
     ruleset.handSizeFor({
       roundNumber: context.roundNumber,
-      playerCount: Math.max(1, context.players.length),
+      playerCount: Math.max(1, seatCount),
       configured
     })
   );
+}
+
+/**
+ * KI-Sitze dieser Runde. Die Zahl kommt aus dem Host-Setup und wird so
+ * gedeckelt, dass Menschen und Bots zusammen an den Tisch passen.
+ */
+function resolveBotSeats(context: ServerGameContext): CardBotSeat[] {
+  const setting = readSetting(context, cardTableRoomSettingKeys.botCount);
+  const requested = typeof setting === "number" && Number.isFinite(setting) ? Math.round(setting) : 0;
+  const free = Math.max(0, cardTableManifest.maxPlayers - context.players.length);
+
+  return createBotSeats(Math.max(0, Math.min(maxBotSeats, requested, free)));
+}
+
+const scoredPhases = new Set(["locked", "result", "scoreboard", "finished"]);
+
+/**
+ * Punktestand der Bots inklusive der Wertung dieser Runde, sobald sie steht.
+ *
+ * Die Plattform bucht nur echte Spieler; für die KI-Sitze macht der Kartentisch
+ * dieselbe Rechnung selbst, mit denselben `buildScore`-Einträgen.
+ */
+function botTotals(state: Partial<CardGameState> | undefined): Record<string, number> {
+  if (!state?.table || typeof state.rulesetId !== "string") {
+    return {};
+  }
+
+  const totals: Record<string, number> = { ...(state.botScores ?? {}) };
+
+  if (!scoredPhases.has(String(state.phase))) {
+    return totals;
+  }
+
+  for (const entry of resolveCardRuleset(state.rulesetId).buildScore(state as CardGameState)) {
+    if (isBotId(entry.playerId)) {
+      totals[entry.playerId] = (totals[entry.playerId] ?? 0) + entry.delta;
+    }
+  }
+
+  return totals;
+}
+
+/** Punktestand der Bots aus der Vorrunde, damit Wertungen über Runden tragen. */
+function carryBotScores(context: ServerGameContext, bots: CardBotSeat[]): Record<string, number> {
+  const carried = botTotals(context.previousRound?.state as Partial<CardGameState> | undefined);
+  const scores: Record<string, number> = {};
+
+  for (const bot of bots) {
+    const value = carried[bot.id];
+    scores[bot.id] = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  }
+
+  return scores;
 }
 
 function buildRulesetContext(state: CardGameState, context: ServerGameContext): CardRulesetContext {
@@ -90,6 +154,13 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
   for (const player of context.players) {
     playerNames[player.id] = player.name;
     scores[player.id] = player.score;
+  }
+
+  const totals = botTotals(state);
+
+  for (const bot of state.bots) {
+    playerNames[bot.id] = bot.name;
+    scores[bot.id] = totals[bot.id] ?? 0;
   }
 
   return {
@@ -104,8 +175,10 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
 function createRuntimeState(context: ServerGameContext): CardGameState {
   const ruleset = resolveRuleset(context);
   const deck = resolveDeck(context, ruleset);
-  const handSize = resolveHandSize(context, ruleset);
-  const playerIds = context.players.map((player) => player.id);
+  const bots = resolveBotSeats(context);
+  const botScores = carryBotScores(context, bots);
+  const playerIds = [...context.players.map((player) => player.id), ...bots.map((bot) => bot.id)];
+  const handSize = resolveHandSize(context, ruleset, playerIds.length);
   const table = createCardTable({
     deck,
     playerIds,
@@ -116,8 +189,14 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     deck,
     language: context.language,
     now: context.now,
-    playerNames: Object.fromEntries(context.players.map((player) => [player.id, player.name])),
-    scores: Object.fromEntries(context.players.map((player) => [player.id, player.score]))
+    playerNames: {
+      ...Object.fromEntries(context.players.map((player) => [player.id, player.name])),
+      ...Object.fromEntries(bots.map((bot) => [bot.id, bot.name]))
+    },
+    scores: {
+      ...Object.fromEntries(context.players.map((player) => [player.id, player.score])),
+      ...botScores
+    }
   };
   const intro = ruleset.introMessage(rulesetContext);
   const initial: CardGameState = {
@@ -136,7 +215,10 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     log: [],
     nextLogId: 1,
     gameOver: false,
-    extra: {}
+    extra: {},
+    bots,
+    botScores,
+    botReadyAt: null
   };
 
   return ruleset.setupRound ? ruleset.setupRound(initial, rulesetContext) : initial;
@@ -154,16 +236,20 @@ function buildStacks(
 ): CardTableStackState[] {
   const en = context.language === "en";
   const deck = rulesetContext.deck;
-  const stacks: CardTableStackState[] = [
-    {
+  const stacks: CardTableStackState[] = [];
+
+  // Ein leerer Nachziehstapel ist kein Platzhalter wert - Spiele ohne Ziehen
+  // zeigen ihn gar nicht erst.
+  if (state.table.drawPile.length > 0) {
+    stacks.push({
       id: "draw",
       label: en ? "Draw pile" : "Nachziehstapel",
       kind: "draw",
       count: state.table.drawPile.length,
       cards: [],
       faceDown: true
-    }
-  ];
+    });
+  }
 
   if (state.table.discardPile.length > 0) {
     stacks.push({
@@ -204,19 +290,24 @@ function buildSeats(
   context: ServerGameContext
 ): CardTableSeatState[] {
   const players = new Map(context.players.map((player) => [player.id, player]));
+  const bots = new Map(state.bots.map((bot) => [bot.id, bot]));
+  const totals = botTotals(state);
   const activeId = state.table.turnOrder[state.table.activeIndex] ?? null;
 
   return state.table.turnOrder.map((playerId) => {
     const player = players.get(playerId);
+    const bot = bots.get(playerId);
 
     return {
       playerId,
-      name: player?.name ?? playerId,
-      color: player?.color ?? "#8d5f4a",
-      connected: player?.connected ?? false,
+      name: bot?.name ?? player?.name ?? playerId,
+      color: bot?.color ?? player?.color ?? "#8d5f4a",
+      // Ein Bot ist nie "abwesend" - er sitzt immer am Tisch.
+      connected: bot ? true : player?.connected ?? false,
       handCount: handOf(state.table, playerId).length,
-      score: player?.score ?? 0,
+      score: bot ? totals[playerId] ?? 0 : player?.score ?? 0,
       isActive: playerId === activeId && !state.gameOver,
+      isBot: Boolean(bot),
       statusLabel: ruleset.seatStatus(state, rulesetContext, playerId)
     };
   });
@@ -234,6 +325,8 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
     title: ruleset.label[context.language] ?? ruleset.label.de,
     deckLabel: `${deck.label} · ${countDeckCards(deck)} ${context.language === "en" ? "cards" : "Karten"}`,
     backStyle: deck.backStyle ?? "classic",
+    cardStyle: resolveCardStyle(context),
+    rules: ruleset.rules(rulesetContext),
     seats: buildSeats(state, ruleset, rulesetContext, context),
     stacks: buildStacks(state, ruleset, rulesetContext, context),
     activePlayerId: state.gameOver ? null : activeId,
@@ -307,6 +400,18 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
         roomSettings[cardTableRoomSettingKeys.deck] = resolveCardDeck(configure.deck).id;
       }
 
+      if (typeof configure.cardStyle === "string") {
+        roomSettings[cardTableRoomSettingKeys.cardStyle] =
+          cardStyles.find((style) => style === configure.cardStyle) ?? "classic";
+      }
+
+      if (typeof configure.botCount === "number" && Number.isFinite(configure.botCount)) {
+        roomSettings[cardTableRoomSettingKeys.botCount] = Math.max(
+          0,
+          Math.min(maxBotSeats, Math.round(configure.botCount))
+        );
+      }
+
       if (typeof configure.handSize === "number" && Number.isFinite(configure.handSize)) {
         roomSettings[cardTableRoomSettingKeys.handSize] = Math.max(
           minHandSize,
@@ -348,7 +453,9 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
     const ruleset = resolveCardRuleset(state.rulesetId);
     const rulesetContext = buildRulesetContext(state, context);
 
-    if (!state.table.turnOrder.includes(input.playerId)) {
+    // KI-Sitze gehören der Runtime; ein Input mit ihrer Id kommt nicht von
+    // einem Handy und wird nie ausgeführt.
+    if (isBotId(input.playerId) || !state.table.turnOrder.includes(input.playerId)) {
       return state;
     }
 
@@ -365,6 +472,12 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
     }
 
     return state;
+  },
+
+  tick(state, _deltaMs, context) {
+    const ruleset = resolveCardRuleset(state.rulesetId);
+
+    return driveBots(state, ruleset, buildRulesetContext(state, context));
   },
 
   isRoundFinished(state) {
@@ -394,6 +507,8 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
 
     return {
       ...publicState,
+      // Die Regeln stehen auf dem Host; das Handy braucht sie nicht mitgeschickt.
+      rules: [],
       hand,
       canAct:
         state.phase === "playing" &&

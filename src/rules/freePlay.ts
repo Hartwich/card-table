@@ -72,6 +72,74 @@ export const freePlayRuleset: CardRuleset = {
   openStartCard: true,
   turnBased: false,
 
+  rules(context) {
+    const en = context.language === "en";
+
+    return en
+      ? [
+          {
+            title: "What this is",
+            lines: [
+              "An open table without rules — for card games you referee yourselves.",
+              "The server checks nothing except that a card is really in your hand."
+            ]
+          },
+          {
+            title: "Your turn",
+            lines: [
+              "Anyone may play a card onto the pile at any time.",
+              "Anyone may draw a card at any time.",
+              "The turn marker is passed on by hand with Pass turn."
+            ]
+          },
+          {
+            title: "The table",
+            lines: [
+              "The draw pile refills itself from the discard pile when it runs out.",
+              "The host can reshuffle the pile or end the round at any point."
+            ]
+          },
+          {
+            title: "End of the round",
+            lines: [
+              "A player with an empty hand ends the round and scores one point.",
+              "Otherwise the host ends it."
+            ]
+          }
+        ]
+      : [
+          {
+            title: "Worum es geht",
+            lines: [
+              "Ein offener Tisch ohne Regeln — für Kartenspiele, die ihr selbst schiedsrichtert.",
+              "Der Server prüft nichts außer, dass eine Karte wirklich auf deiner Hand liegt."
+            ]
+          },
+          {
+            title: "Dein Zug",
+            lines: [
+              "Jeder darf jederzeit eine Karte auf die Ablage legen.",
+              "Jeder darf jederzeit eine Karte ziehen.",
+              "Die Zugmarke wird von Hand mit „Zug weitergeben“ weitergereicht."
+            ]
+          },
+          {
+            title: "Der Tisch",
+            lines: [
+              "Ist der Nachziehstapel leer, wird die Ablage automatisch neu gemischt.",
+              "Der Host kann die Ablage jederzeit mischen oder die Runde beenden."
+            ]
+          },
+          {
+            title: "Rundenende",
+            lines: [
+              "Wer keine Karte mehr auf der Hand hat, beendet die Runde und bekommt einen Punkt.",
+              "Ansonsten beendet der Host die Runde."
+            ]
+          }
+        ];
+  },
+
   introMessage(context) {
     return words(context).intro as string;
   },
@@ -209,4 +277,8 @@ export const freePlayRuleset: CardRuleset = {
       ? [{ playerId: state.winnerPlayerId, delta: 1, reason: "Kartentisch" }]
       : [];
   }
+
+  // Kein botMove: Im freien Spiel gibt es keine Regeln, an denen sich eine
+  // Taktik ausrichten könnte. Hier übernimmt der generische Bot - er legt eine
+  // Karte ab und gibt weiter.
 };

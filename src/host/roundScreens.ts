@@ -1,20 +1,19 @@
-import Phaser from "phaser";
 import { cardTableManifest } from "../manifest.js";
 import type { CardTablePublicState } from "../protocol.js";
-import { tokens } from "./platformTheme.js";
+import { escapeHtml } from "./cardHtml.js";
 
 /**
  * Runden-Intro und Ergebnis.
  *
  * Die Plattform bringt keine eigenen Zwischenbildschirme mit: Alles, was nach
- * dem Rundenstart zu sehen ist, gehört dem Spiel. Beide Screens werden hier
- * komplett neu gezeichnet, damit die Szene keine Zustandsreste behält.
+ * dem Rundenstart zu sehen ist, gehört dem Spiel. Beide Screens sind hier
+ * einfaches HTML und liegen im selben Overlay wie der Spieltisch.
  */
 
 const introPhases = new Set(["round_intro", "countdown"]);
 const resultPhases = new Set(["result", "scoreboard", "finished"]);
 
-interface RoundScreenStateLike {
+export interface RoundScreenStateLike {
   game?: {
     phase?: string;
     message?: string;
@@ -29,148 +28,98 @@ interface RoundScreenStateLike {
   } | null;
 }
 
-const hex = (color: string): number => Number.parseInt(color.replace("#", ""), 16);
-
 function labels(language?: "de" | "en") {
   const en = language === "en";
 
   return {
-    getReady: en ? "Shuffling the deck" : "Die Karten werden gemischt",
+    shuffling: en ? "The deck is being shuffled" : "Die Karten werden gemischt",
     players: en ? "Players" : "Spieler",
     deck: en ? "Deck" : "Deck",
     result: en ? "Round result" : "Rundenergebnis",
     winner: en ? "Winner" : "Gewinner",
     noWinner: en ? "No winner this round." : "Diese Runde ohne Sieger.",
-    points: en ? "pts" : "Pkt."
+    points: en ? "pts" : "Pkt.",
+    bot: en ? "AI" : "KI"
   };
 }
 
-function drawFrame(scene: Phaser.Scene, title: string, subtitle: string): { x: number; y: number; width: number } {
-  const width = scene.scale.width;
-  const height = scene.scale.height;
-  const panelWidth = Math.min(760, width - 120);
-  const panelX = (width - panelWidth) / 2;
-  const panelY = 74;
-
-  scene.children.removeAll(true);
-  scene.cameras.main.setBackgroundColor(tokens().color.background);
-
-  scene.add
-    .rectangle(width / 2, height / 2, panelWidth, height - 140, hex(tokens().color.surface), 1)
-    .setStrokeStyle(1, hex(tokens().color.line), 1);
-
-  scene.add
-    .text(width / 2, panelY + 32, title, {
-      fontFamily: tokens().font.display,
-      fontSize: "44px",
-      color: tokens().color.text
-    })
-    .setOrigin(0.5, 0);
-
-  scene.add
-    .text(width / 2, panelY + 96, subtitle, {
-      fontFamily: tokens().font.body,
-      fontSize: "20px",
-      color: tokens().color.muted,
-      align: "center",
-      wordWrap: { width: panelWidth - 80 }
-    })
-    .setOrigin(0.5, 0);
-
-  return { x: panelX, y: panelY + 150, width: panelWidth };
-}
-
-/** Zeichnet Intro oder Ergebnis und meldet, ob der Tisch übersprungen wird. */
-export function renderRoundScreens(scene: Phaser.Scene, state: RoundScreenStateLike): boolean {
+/** HTML für Intro oder Ergebnis, oder null solange gespielt wird. */
+export function roundScreenHtml(state: RoundScreenStateLike): string | null {
   const phase = state.game?.phase ?? "";
   const language = state.room?.language;
   const text = labels(language);
   const gameState = state.game?.state as CardTablePublicState | undefined;
 
   if (introPhases.has(phase)) {
-    const frame = drawFrame(
-      scene,
-      gameState?.title ?? cardTableManifest.displayName,
-      state.game?.message ?? text.getReady
-    );
+    const title = escapeHtml(gameState?.title ?? cardTableManifest.displayName);
+    const message = escapeHtml(state.game?.message ?? text.shuffling);
+    const deck = escapeHtml(gameState?.deckLabel ?? "-");
+    const players = gameState?.seats.length ?? state.room?.players?.length ?? 0;
 
-    scene.add
-      .text(
-        scene.scale.width / 2,
-        frame.y,
-        `${text.deck}: ${gameState?.deckLabel ?? "-"}\n${text.players}: ${gameState?.seats.length ?? state.room?.players?.length ?? 0}`,
-        {
-          fontFamily: tokens().font.body,
-          fontSize: "22px",
-          color: tokens().color.textSoft,
-          align: "center",
-          lineSpacing: 10
-        }
-      )
-      .setOrigin(0.5, 0);
-
-    return true;
+    return `<section class="ct-screen">
+      <h1>${title}</h1>
+      <p class="ct-screen-lead">${message}</p>
+      <dl class="ct-screen-meta">
+        <div><dt>${text.deck}</dt><dd>${deck}</dd></div>
+        <div><dt>${text.players}</dt><dd>${players}</dd></div>
+      </dl>
+    </section>`;
   }
 
   if (!resultPhases.has(phase)) {
-    return false;
+    return null;
   }
+
+  const names = new Map((state.room?.players ?? []).map((player) => [player.id, player]));
+  const deltas = new Map((state.scoreboard?.entries ?? []).map((entry) => [entry.playerId, entry.delta]));
+  const totals = new Map((state.scoreboard?.entries ?? []).map((entry) => [entry.playerId, entry.total]));
+
+  // Die Plattform zählt nur echte Spieler. Sitzen KI-Spieler am Tisch, kommt
+  // die Rangliste deshalb aus den Sitzplätzen des Spiels - dort stehen beide.
+  const seats = gameState?.seats ?? [];
+  const rowModels = (
+    seats.length > 0
+      ? seats.map((seat) => ({
+          playerId: seat.playerId,
+          name: seat.name,
+          color: seat.color,
+          isBot: Boolean(seat.isBot),
+          total: totals.get(seat.playerId) ?? seat.score,
+          delta: deltas.get(seat.playerId) ?? 0
+        }))
+      : (state.scoreboard?.entries ?? []).map((entry) => ({
+          playerId: entry.playerId,
+          name: names.get(entry.playerId)?.name ?? entry.playerId,
+          color: names.get(entry.playerId)?.color ?? "#8d5f4a",
+          isBot: false,
+          total: entry.total,
+          delta: entry.delta
+        }))
+  ).sort((left, right) => right.total - left.total);
 
   const winnerLine = gameState?.winnerName
-    ? `${text.winner}: ${gameState.winnerName}`
-    : text.noWinner;
-  const frame = drawFrame(scene, text.result, winnerLine);
-  const names = new Map((state.room?.players ?? []).map((player) => [player.id, player]));
-  const entries = [...(state.scoreboard?.entries ?? [])].sort((left, right) => right.total - left.total);
-  let cursor = frame.y;
+    ? `${text.winner}: ${escapeHtml(gameState.winnerName)}`
+    : escapeHtml(state.game?.message ?? text.noWinner);
+  const rows =
+    rowModels.length === 0
+      ? `<li class="ct-score-empty">${escapeHtml(state.game?.message ?? "")}</li>`
+      : rowModels
+          .map((row, index) => {
+            const delta = row.delta ? `<em>${row.delta > 0 ? "+" : ""}${row.delta}</em>` : "";
+            const badge = row.isBot ? `<em class="ct-seat-bot">${escapeHtml(text.bot)}</em>` : "";
 
-  for (const [index, entry] of entries.entries()) {
-    const player = names.get(entry.playerId);
-    const rowY = cursor + 26;
+            return `<li${index === 0 ? ' class="is-lead"' : ""}>
+              <span class="ct-score-rank">${index + 1}</span>
+              <span class="ct-score-dot" style="background:${escapeHtml(row.color)}"></span>
+              <span class="ct-score-name">${escapeHtml(row.name)}${badge}</span>
+              <span class="ct-score-total">${row.total} ${text.points} ${delta}</span>
+            </li>`;
+          })
+          .join("");
 
-    scene.add
-      .rectangle(scene.scale.width / 2, rowY, frame.width - 80, 46, hex(tokens().color.surfaceMuted), 1)
-      .setStrokeStyle(1, hex(tokens().color.line), 1);
-
-    scene.add
-      .text(frame.x + 56, rowY, `${index + 1}. ${player?.name ?? entry.playerId}`, {
-        fontFamily: tokens().font.body,
-        fontSize: "21px",
-        color: tokens().color.text
-      })
-      .setOrigin(0, 0.5);
-
-    scene.add
-      .text(
-        frame.x + frame.width - 56,
-        rowY,
-        `${entry.total} ${text.points}${entry.delta ? `  (+${entry.delta})` : ""}`,
-        {
-          fontFamily: tokens().font.body,
-          fontSize: "21px",
-          color: entry.delta ? tokens().color.success : tokens().color.muted
-        }
-      )
-      .setOrigin(1, 0.5);
-
-    cursor += 54;
-
-    if (cursor > scene.scale.height - 130) {
-      break;
-    }
-  }
-
-  if (entries.length === 0) {
-    scene.add
-      .text(scene.scale.width / 2, frame.y + 20, state.game?.message ?? "", {
-        fontFamily: tokens().font.body,
-        fontSize: "20px",
-        color: tokens().color.muted,
-        align: "center",
-        wordWrap: { width: frame.width - 80 }
-      })
-      .setOrigin(0.5, 0);
-  }
-
-  return true;
+  return `<section class="ct-screen">
+    <h1>${text.result}</h1>
+    <p class="ct-screen-lead">${winnerLine}</p>
+    <ol class="ct-score">${rows}</ol>
+  </section>`;
 }

@@ -15,6 +15,7 @@ import {
   readText,
   withError,
   writeExtra,
+  type CardBotIntent,
   type CardGameState,
   type CardRuleset,
   type CardRulesetContext
@@ -338,6 +339,116 @@ export const schwimmenRuleset: CardRuleset = {
     };
   },
 
+  rules(context) {
+    const en = context.language === "en";
+
+    return en
+      ? [
+          {
+            title: "Goal",
+            lines: [
+              "Collect the highest total in a single suit.",
+              "Whoever holds the lowest hand at the showdown loses a life."
+            ]
+          },
+          {
+            title: "Card values",
+            lines: [
+              "Ace 11, king / queen / jack / ten 10, every other card its number.",
+              "Only cards of the same suit add up — two suits never combine.",
+              "Three cards of the same rank count 30.5.",
+              "31 is the maximum and is called fire."
+            ]
+          },
+          {
+            title: "Your turn — pick one",
+            lines: [
+              "Swap one: give a hand card away and take one of the three open table cards.",
+              "Swap all: exchange your whole hand for all three table cards.",
+              "Push: do nothing and pass on.",
+              "Knock: end the round for everyone else."
+            ]
+          },
+          {
+            title: "Pushing and knocking",
+            lines: [
+              "If everyone pushes in a row, the three table cards are replaced from the pile.",
+              "After a knock every other player has exactly one more turn, then all hands are revealed.",
+              "The player who knocked does not get another turn."
+            ]
+          },
+          {
+            title: "Lives",
+            lines: [
+              "Everyone starts with three lives.",
+              "The lowest hand loses one. If several tie for lowest, they all lose one.",
+              "If everybody ties, nobody loses a life.",
+              "At zero lives you are swimming — the next loss puts you out.",
+              "Reaching 31 ends the round at once and every other player loses a life."
+            ]
+          },
+          {
+            title: "End of the round",
+            lines: [
+              "After each showdown the remaining players are dealt fresh cards.",
+              "The last player left wins the round and scores one point."
+            ]
+          }
+        ]
+      : [
+          {
+            title: "Ziel",
+            lines: [
+              "Sammle möglichst viele Punkte in einer einzigen Farbe.",
+              "Wer beim Aufdecken die niedrigste Hand hat, verliert ein Leben."
+            ]
+          },
+          {
+            title: "Kartenwerte",
+            lines: [
+              "Ass 11, König / Dame / Bube / Zehn 10, alle anderen Karten ihren Zahlenwert.",
+              "Nur Karten derselben Farbe zählen zusammen — zwei Farben werden nie addiert.",
+              "Drei Karten desselben Werts zählen 30,5.",
+              "31 ist das Maximum und heißt Feuer."
+            ]
+          },
+          {
+            title: "Dein Zug — eins von vier",
+            lines: [
+              "Einzeln tauschen: Du gibst eine Handkarte ab und nimmst dafür eine der drei offenen Tischkarten.",
+              "Alle drei tauschen: Deine komplette Hand gegen alle drei Tischkarten.",
+              "Schieben: nichts tun und weitergeben.",
+              "Klopfen: die Runde für alle anderen einläuten."
+            ]
+          },
+          {
+            title: "Schieben und Klopfen",
+            lines: [
+              "Schieben alle reihum, werden die drei Tischkarten durch drei neue vom Stapel ersetzt.",
+              "Nach dem Klopfen hat jeder andere noch genau einen Zug, dann wird aufgedeckt.",
+              "Wer geklopft hat, kommt nicht noch einmal dran."
+            ]
+          },
+          {
+            title: "Leben",
+            lines: [
+              "Jeder startet mit drei Leben.",
+              "Die niedrigste Hand verliert eins. Sind mehrere gleich niedrig, verlieren alle davon eins.",
+              "Sind alle gleichauf, verliert niemand.",
+              "Bei null Leben schwimmst du — beim nächsten Verlust bist du raus.",
+              "Wer 31 erreicht, beendet die Runde sofort; alle anderen verlieren ein Leben."
+            ]
+          },
+          {
+            title: "Rundenende",
+            lines: [
+              "Nach jedem Aufdecken bekommen die verbliebenen Spieler neue Karten.",
+              "Wer als Letzter übrig bleibt, gewinnt die Runde und bekommt einen Punkt."
+            ]
+          }
+        ];
+  },
+
   introMessage(context) {
     return words(context).intro as string;
   },
@@ -592,8 +703,62 @@ export const schwimmenRuleset: CardRuleset = {
     return state.winnerPlayerId
       ? [{ playerId: state.winnerPlayerId, delta: 1, reason: "Schwimmen" }]
       : [];
+  },
+
+  /**
+   * KI-Zug.
+   *
+   * Schwimmen ist rechenbar: Der Bot probiert jeden Einzeltausch und den
+   * Komplettausch durch und nimmt den, der seinen Handwert am stärksten hebt.
+   * Bringt kein Tausch etwas, klopft er ab 27 Punkten - darunter schiebt er
+   * lieber und wartet auf bessere Tischkarten.
+   */
+  botMove(state, context, playerId) {
+    if (!isActive(state, playerId) || isOut(state, playerId)) {
+      return { kind: "wait" };
+    }
+
+    const hand = handOf(state.table, playerId);
+    const open = tableCardIds(state);
+    const current = schwimmenHandValue(state, context, hand);
+    let bestValue = current;
+    let bestIntent: CardBotIntent | null = null;
+
+    for (const cardId of hand) {
+      for (const tableCardId of open) {
+        const swapped = [...hand.filter((entry) => entry !== cardId), tableCardId];
+        const value = schwimmenHandValue(state, context, swapped);
+
+        if (value > bestValue) {
+          bestValue = value;
+          bestIntent = { kind: "play", cardId, choiceId: tableCardId };
+        }
+      }
+    }
+
+    const allValue = schwimmenHandValue(state, context, open);
+
+    if (allValue > bestValue) {
+      bestValue = allValue;
+      bestIntent = { kind: "action", actionId: "swap-all" };
+    }
+
+    if (bestIntent) {
+      return bestIntent;
+    }
+
+    const knocker = readText(state, knockerKey);
+
+    if (!knocker && current >= knockThreshold) {
+      return { kind: "action", actionId: "knock" };
+    }
+
+    return { kind: "action", actionId: "push" };
   }
 };
+
+/** Ab diesem Handwert klopft ein Bot, statt weiter zu schieben. */
+const knockThreshold = 27;
 
 /**
  * Schließt einen Zug ab: prüft Feuer, beendet nach dem Klopfen die Runde und

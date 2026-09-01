@@ -11,6 +11,7 @@ import {
 } from "../cards/cardTable.js";
 import type { CardInstance, DeckDefinition } from "../cards/cardTypes.js";
 import type { CardTableActionState, CardTableChoiceState } from "../protocol.js";
+import { bestOf, smallestOpponentHand, suitCounts } from "../bots/tactics.js";
 import {
   appendLog,
   clearError,
@@ -54,6 +55,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     needWish: "Wähle eine Wunschfarbe.",
     played: "legt",
     wished: "wünscht sich",
+    wishShort: "Wunsch",
     drew: "zieht eine Karte",
     drewMany: "zieht",
     cards: "Karten",
@@ -80,6 +82,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     needWish: "Choose a wish suit.",
     played: "plays",
     wished: "wishes for",
+    wishShort: "Wish",
     drew: "draws a card",
     drewMany: "draws",
     cards: "cards",
@@ -97,7 +100,6 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 function words(context: CardRulesetContext): Record<string, string> {
   return copy[context.language] ?? copy.de;
 }
-
 function wildRankIds(deck: DeckDefinition): string[] {
   return deck.wildRankIds ?? ["jack"];
 }
@@ -140,6 +142,106 @@ export const mauMauRuleset: CardRuleset = {
   defaultHandSize: 5,
   openStartCard: true,
   turnBased: true,
+
+  rules(context) {
+    const en = context.language === "en";
+
+    return en
+      ? [
+          {
+            title: "Goal",
+            lines: ["Be the first to play every card in your hand."]
+          },
+          {
+            title: "Playing a card",
+            lines: [
+              "Your card has to match the top card of the pile in suit or in rank.",
+              "A jack may always be played, whatever is lying there.",
+              "With a joker deck, jokers work like jacks."
+            ]
+          },
+          {
+            title: "Special cards",
+            lines: [
+              "7 — the next player draws two. Sevens stack: play one on top and the whole penalty moves on.",
+              "8 — the next player is skipped.",
+              "9 — the direction of play reverses. With two players it works like a skip.",
+              "Jack — you name a suit. Only that suit counts until the next jack."
+            ]
+          },
+          {
+            title: "If you cannot or will not play",
+            lines: [
+              "Draw exactly one card.",
+              "Does it fit? Then you may play it right away — or keep it and pass.",
+              "Does it not fit? The turn passes on.",
+              "Facing a stack of sevens you have to play a seven or take all the penalty cards."
+            ]
+          },
+          {
+            title: "End of the round",
+            lines: [
+              "The first player with an empty hand wins the round and scores one point.",
+              "An empty draw pile is refilled from the discard pile, so the round never stalls."
+            ]
+          },
+          {
+            title: "On your phone",
+            lines: [
+              "Tap a card to pick it up, tap again to play it — or use Play.",
+              "Greyed-out cards do not fit; the reason is shown next to the buttons.",
+              "Draw takes a card, Pass hands over once you have drawn."
+            ]
+          }
+        ]
+      : [
+          {
+            title: "Ziel",
+            lines: ["Lege als Erster alle Karten deiner Hand ab."]
+          },
+          {
+            title: "Anlegen",
+            lines: [
+              "Deine Karte muss die Farbe oder den Wert der obersten Ablagekarte treffen.",
+              "Ein Bube darf immer gelegt werden, egal was oben liegt.",
+              "Im Blatt mit Jokern wirken die Joker wie Buben."
+            ]
+          },
+          {
+            title: "Sonderkarten",
+            lines: [
+              "7 — der Nächste zieht zwei. Siebenen stapeln sich: Wer eine drauflegt, gibt die ganze Strafe weiter.",
+              "8 — der Nächste setzt aus.",
+              "9 — die Spielrichtung dreht sich. Zu zweit wirkt sie wie Aussetzen.",
+              "Bube — du wünschst dir eine Farbe. Bis zum nächsten Buben zählt nur diese Farbe."
+            ]
+          },
+          {
+            title: "Wenn nichts passt",
+            lines: [
+              "Zieh genau eine Karte.",
+              "Passt sie, darfst du sie sofort legen — oder behalten und abgeben.",
+              "Passt sie nicht, ist der Nächste dran.",
+              "Liegt ein Sieben-Angriff an, musst du eine Sieben legen oder alle Strafkarten ziehen."
+            ]
+          },
+          {
+            title: "Rundenende",
+            lines: [
+              "Wer zuerst keine Karte mehr hat, gewinnt die Runde und bekommt einen Punkt.",
+              "Ist der Nachziehstapel leer, wird die Ablage neu gemischt — die Runde kann nicht steckenbleiben."
+            ]
+          },
+          {
+            title: "Am Handy",
+            lines: [
+              "Karte antippen wählt sie aus, zweites Tippen legt sie — oder du nimmst „Legen“.",
+              "Ausgegraute Karten passen nicht; der Grund steht neben den Buttons.",
+              "„Ziehen“ nimmt eine Karte, „Weiter“ gibt ab, nachdem du gezogen hast."
+            ]
+          }
+        ];
+  },
 
   introMessage(context) {
     return words(context).intro as string;
@@ -221,8 +323,10 @@ export const mauMauRuleset: CardRuleset = {
       logText = `${logText} - ${text.skipped}`;
       table = advanceTurn(table, 2);
     } else if (mauMauRules.reverseRankIds.includes(card.rankId as never)) {
-      logText = `${logText} - ${text.reversed}`;
-      table = advanceTurn(reverseDirection(table));
+      // Zu zweit gäbe ein Richtungswechsel nichts her - dort wirkt er wie Aussetzen.
+      const twoPlayers = table.turnOrder.length <= 2;
+      logText = `${logText} - ${twoPlayers ? text.skipped : text.reversed}`;
+      table = advanceTurn(reverseDirection(table), twoPlayers ? 2 : 1);
     } else {
       table = advanceTurn(table);
     }
@@ -417,7 +521,7 @@ export const mauMauRuleset: CardRuleset = {
       const suit = context.deck.suits.find((entry) => entry.id === state.wishSuitId);
 
       return {
-        label: `${text.wished} ${suit?.label ?? state.wishSuitId}`,
+        label: `${text.wishShort}: ${suit?.label ?? state.wishSuitId}`,
         symbol: suit?.symbol,
         color: suit?.color
       };
@@ -442,5 +546,85 @@ export const mauMauRuleset: CardRuleset = {
     return state.winnerPlayerId
       ? [{ playerId: state.winnerPlayerId, delta: 1, reason: "Mau-Mau" }]
       : [];
+  },
+
+  /**
+   * KI-Zug.
+   *
+   * Grundhaltung: Sonderkarten sind Munition, keine Ballast. Der Bot spart sie
+   * auf, solange die Runde ruhig läuft, und feuert sie, sobald jemand kurz vor
+   * dem Sieg steht. Der Bube ist die teuerste Karte - er passt immer und wird
+   * deshalb zuletzt gelegt.
+   */
+  botMove(state, context, playerId) {
+    if (!isActive(state, playerId)) {
+      return { kind: "wait" };
+    }
+
+    const hand = handOf(state.table, playerId);
+    const playable = hand.filter(
+      (cardId) => mauMauRuleset.canPlayCard(state, context, playerId, cardId).allowed
+    );
+
+    if (playable.length === 0) {
+      return state.drawnThisTurn === 0 ? { kind: "draw" } : { kind: "action", actionId: "pass" };
+    }
+
+    // Gestapelte Siebenen: weiterreichen, solange eine da ist.
+    if (state.pendingDraw > 0) {
+      const seven = playable[0];
+
+      return seven ? { kind: "play", cardId: seven } : { kind: "draw" };
+    }
+
+    const pressure = smallestOpponentHand(state, playerId) <= 2;
+    const counts = suitCounts(state, playerId);
+
+    const cardId = bestOf(playable, (entry) => {
+      const card = state.table.cards[entry];
+
+      if (!card) {
+        return -100;
+      }
+
+      const wild = isWild(context.deck, card);
+      const attack =
+        mauMauRules.drawTwoRankIds.includes(card.rankId as never) ||
+        mauMauRules.skipRankIds.includes(card.rankId as never);
+
+      // Wunschkarten halten, solange es andere Wege gibt.
+      if (wild) {
+        return hand.length <= 2 ? 40 : -20;
+      }
+
+      if (attack) {
+        return pressure ? 60 : 5;
+      }
+
+      // Sonst aus der längsten Farbe legen - das hält die Hand anschlussfähig.
+      return 15 + (counts.get(card.suitId ?? "") ?? 0);
+    });
+
+    if (!cardId) {
+      return { kind: "draw" };
+    }
+
+    const card = state.table.cards[cardId];
+
+    if (!card || !isWild(context.deck, card)) {
+      return { kind: "play", cardId };
+    }
+
+    // Gewünscht wird die Farbe, die nach dem Legen am stärksten auf der Hand ist.
+    const remaining = new Map(counts);
+    const ownSuit = card.suitId;
+
+    if (ownSuit) {
+      remaining.set(ownSuit, (remaining.get(ownSuit) ?? 1) - 1);
+    }
+
+    const wish = bestOf(context.deck.suits, (suit) => remaining.get(suit.id) ?? 0);
+
+    return { kind: "play", cardId, choiceId: wish?.id };
   }
 };
