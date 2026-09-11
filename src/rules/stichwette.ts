@@ -480,8 +480,9 @@ export const trickBetRuleset: CardRuleset = {
       cleared = moveCard(cleared, archivedId, { kind: "zone", zoneId: wonZoneId }, "bottom");
     }
 
-    // Der fertige Stich bleibt sichtbar liegen, bis der nächste komplett ist.
-    // Sonst wäre er in derselben Sekunde weg, in der die letzte Karte fällt.
+    // Der fertige Stich wandert in die Zone "letzter Stich". Offen liegt er
+    // dort nicht - der Host zeigt ihn nur, wenn jemand danach fragt, und die
+    // Animation sagt im Moment des Abräumens, wer ihn bekommen hat.
     for (const trickCardId of played) {
       cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: lastTrickZoneId }, "bottom");
     }
@@ -492,7 +493,9 @@ export const trickBetRuleset: CardRuleset = {
       writeExtra(
         {
           ...next,
-          table: { ...cleared, activeIndex: winnerIndex }
+          table: { ...cleared, activeIndex: winnerIndex },
+          lastTrickWinnerId: winnerId,
+          lastTrickSerial: (next.lastTrickSerial ?? 0) + 1
         },
         {
           [tricksKey(winnerId)]: tricksOf(next, winnerId) + 1,
@@ -649,7 +652,8 @@ export const trickBetRuleset: CardRuleset = {
         count: lastCards.length,
         cards: lastCards,
         faceDown: false,
-        layout: "spread"
+        layout: "spread",
+        onDemand: true
       });
     }
 
@@ -774,6 +778,48 @@ export const trickBetRuleset: CardRuleset = {
     const cheapestWinner = bestOf(winners, (cardId) => -strength(cardId));
 
     return { kind: "play", cardId: highestLoser ?? (cheapestWinner as string) };
+  },
+
+  /**
+   * Kronen nach vorn, dann der Trumpf, dann die übrigen Farben - und Federn
+   * ganz nach hinten, weil sie nie einen Stich holen.
+   */
+  sortHand(state, context, _playerId, cardIds) {
+    const trumpSuitId = readText(state, trumpKey);
+    const suitIndex = (suitId: string | null): number => {
+      const index = context.deck.suits.findIndex((suit) => suit.id === suitId);
+      return index < 0 ? 99 : index;
+    };
+    const group = (card: CardInstance): number => {
+      if (isCrownCard(card)) {
+        return 0;
+      }
+
+      if (isFeatherCard(card)) {
+        return 9;
+      }
+
+      return trumpSuitId && card.suitId === trumpSuitId ? 1 : 2;
+    };
+
+    return [...cardIds].sort((left, right) => {
+      const a = state.table.cards[left];
+      const b = state.table.cards[right];
+
+      if (!a || !b) {
+        return 0;
+      }
+
+      if (group(a) !== group(b)) {
+        return group(a) - group(b);
+      }
+
+      if (a.suitId !== b.suitId) {
+        return suitIndex(a.suitId) - suitIndex(b.suitId);
+      }
+
+      return rankOrder(context, b) - rankOrder(context, a);
+    });
   }
 };
 

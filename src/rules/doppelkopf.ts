@@ -480,8 +480,9 @@ export const doppelkopfRuleset: CardRuleset = {
       cleared = moveCard(cleared, archivedId, { kind: "zone", zoneId: wonZoneId }, "bottom");
     }
 
-    // Der fertige Stich bleibt sichtbar liegen, bis der nächste komplett ist.
-    // Sonst wäre er in derselben Sekunde weg, in der die letzte Karte fällt.
+    // Der fertige Stich wandert in die Zone "letzter Stich". Offen liegt er
+    // dort nicht - der Host zeigt ihn nur, wenn jemand danach fragt, und die
+    // Animation sagt im Moment des Abräumens, wer ihn bekommen hat.
     for (const trickCardId of played) {
       cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: lastTrickZoneId }, "bottom");
     }
@@ -490,7 +491,12 @@ export const doppelkopfRuleset: CardRuleset = {
 
     next = appendLog(
       writeExtra(
-        { ...next, table: { ...cleared, activeIndex: winnerIndex } },
+        {
+          ...next,
+          table: { ...cleared, activeIndex: winnerIndex },
+          lastTrickWinnerId: winnerId,
+          lastTrickSerial: (next.lastTrickSerial ?? 0) + 1
+        },
         {
           [pointsKey(winnerId)]: pointsOf(next, winnerId) + eyes,
           [leadKey]: noLead,
@@ -580,7 +586,8 @@ export const doppelkopfRuleset: CardRuleset = {
         count: lastCards.length,
         cards: lastCards,
         faceDown: false,
-        layout: "spread"
+        layout: "spread",
+        onDemand: true
       });
     }
 
@@ -701,6 +708,40 @@ export const doppelkopfRuleset: CardRuleset = {
     const dump = losers.length > 0 ? losers : playable;
 
     return { kind: "play", cardId: bestOf(dump, (cardId) => -augen(cardId) - rank(cardId) / 1_000) as string };
+  },
+
+  /**
+   * Sortiert die Hand fürs Handy: erst der Trumpf von der Dulle abwärts, dann
+   * die Fehlfarben gruppiert und je von oben nach unten. Genau so legt man das
+   * Blatt auch am Tisch hin - man will auf einen Blick sehen, wie lang man in
+   * Trumpf ist und welche Farbe man gar nicht hat.
+   */
+  sortHand(state, _context, _playerId, cardIds) {
+    return [...cardIds].sort((left, right) => {
+      const a = state.table.cards[left];
+      const b = state.table.cards[right];
+
+      if (!a || !b) {
+        return 0;
+      }
+
+      const trumpA = isDoppelkopfTrump(a);
+      const trumpB = isDoppelkopfTrump(b);
+
+      if (trumpA !== trumpB) {
+        return trumpA ? -1 : 1;
+      }
+
+      if (trumpA && trumpB) {
+        return trumpValue(b) - trumpValue(a);
+      }
+
+      if (a.suitId !== b.suitId) {
+        return (suitOrder[a.suitId ?? ""] ?? 50) - (suitOrder[b.suitId ?? ""] ?? 50);
+      }
+
+      return (fehlOrder[b.rankId] ?? 0) - (fehlOrder[a.rankId] ?? 0);
+    });
   }
 };
 

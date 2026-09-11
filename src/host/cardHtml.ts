@@ -113,5 +113,5 @@ export function stackHtml(
     body = `<div class="ct-stack-cards">${inner}</div>`;
   }
 
-  return `<div class="ct-stack">${body}${label}</div>`;
+  return `<div class="ct-stack" data-stack="${escapeHtml(stack.id)}">${body}${label}</div>`;
 }

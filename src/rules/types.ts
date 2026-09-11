@@ -43,6 +43,10 @@ export interface CardGameState extends BaseRoundState {
   botScores: Record<string, number>;
   /** Zeitpunkt, an dem der nächste KI-Zug fällig ist. */
   botReadyAt: number | null;
+  /** Wer den zuletzt abgeräumten Stich bekommen hat. */
+  lastTrickWinnerId?: string;
+  /** Zähler, der mit jedem abgeräumten Stich steigt. */
+  lastTrickSerial?: number;
 }
 
 /**
@@ -116,6 +120,19 @@ export interface CardRuleset {
   setupRound?(state: CardGameState, context: CardRulesetContext): CardGameState;
   /** Eigene Tischstapel statt der generischen Zonen. */
   tableStacks?(state: CardGameState, context: CardRulesetContext): CardTableStackState[];
+  /**
+   * Sortiert die Handkarten für die Anzeige.
+   *
+   * Reine Darstellung - die Reihenfolge im Tischzustand bleibt, wie sie ist.
+   * Der Server wendet den Haken beim Bauen der Hand an, das Handy bekommt sie
+   * also schon geordnet und muss nichts wissen.
+   */
+  sortHand?(
+    state: CardGameState,
+    context: CardRulesetContext,
+    playerId: string,
+    cardIds: string[]
+  ): string[];
   /** Hinweis, den nur dieser Spieler sieht, z. B. der eigene Handwert. */
   privateNote?(
     state: CardGameState,

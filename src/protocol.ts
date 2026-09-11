@@ -52,6 +52,15 @@ export interface CardTableStackState {
   faceDown: boolean;
   /** Zeichenweise; ohne Angabe `pile`. */
   layout?: CardTableStackLayout;
+  /**
+   * Nur auf Anforderung sichtbar.
+   *
+   * Der Host blendet solche Stapel erst ein, wenn jemand danach fragt, und
+   * versteckt sie wieder, sobald weitergespielt wird. Gedacht für Dinge, die
+   * man nachschlagen können will, ohne dass sie dauerhaft den Tisch belegen -
+   * den letzten Stich zum Beispiel.
+   */
+  onDemand?: boolean;
 }
 
 export interface CardTableSeatState {
@@ -133,6 +142,15 @@ export interface CardTablePublicState {
   winnerPlayerId?: string;
   winnerName?: string;
   lastError?: string;
+  /**
+   * Wer den zuletzt abgeräumten Stich bekommen hat, und der wievielte es war.
+   *
+   * Der Host erkennt daran, dass gerade ein Stich gewonnen wurde, und lässt die
+   * Karten zum Sitzplatz fliegen. Bewusst ein eigenes Feld statt eines Blicks
+   * in die Beschriftung des Stapels - Text ist keine Schnittstelle.
+   */
+  lastTrickWinnerId?: string;
+  lastTrickSerial?: number;
 }
 
 export interface CardTableControllerState extends CardTablePublicState {
@@ -178,6 +196,7 @@ export interface CardTableConfigureLobbyAction {
   cardStyle?: string;
   botCount?: number;
   doppelkopfScoring?: string;
+  handSort?: string;
 }
 
 export type CardTableHostAction = CardTableHostActionMessage | CardTableConfigureLobbyAction;

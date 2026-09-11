@@ -417,8 +417,9 @@ export const herzelnRuleset: CardRuleset = {
       cleared = moveCard(cleared, archivedId, { kind: "zone", zoneId: wonZoneId }, "bottom");
     }
 
-    // Der fertige Stich bleibt sichtbar liegen, bis der nächste komplett ist.
-    // Sonst wäre er in derselben Sekunde weg, in der die letzte Karte fällt.
+    // Der fertige Stich wandert in die Zone "letzter Stich". Offen liegt er
+    // dort nicht - der Host zeigt ihn nur, wenn jemand danach fragt, und die
+    // Animation sagt im Moment des Abräumens, wer ihn bekommen hat.
     for (const trickCardId of played) {
       cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: lastTrickZoneId }, "bottom");
     }
@@ -427,7 +428,12 @@ export const herzelnRuleset: CardRuleset = {
 
     next = appendLog(
       writeExtra(
-        { ...next, table: { ...cleared, activeIndex: winnerIndex } },
+        {
+          ...next,
+          table: { ...cleared, activeIndex: winnerIndex },
+          lastTrickWinnerId: winnerId,
+          lastTrickSerial: (next.lastTrickSerial ?? 0) + 1
+        },
         {
           [penaltyKey(winnerId)]: penaltyPoints(next, winnerId) + penalty,
           [leadKey]: noLead,
@@ -520,7 +526,8 @@ export const herzelnRuleset: CardRuleset = {
         count: lastCards.length,
         cards: lastCards,
         faceDown: false,
-        layout: "spread"
+        layout: "spread",
+        onDemand: true
       });
     }
 
@@ -604,6 +611,33 @@ export const herzelnRuleset: CardRuleset = {
     }
 
     return { kind: "play", cardId: bestOf(playable, (entry) => -cost(entry)) as string };
+  },
+
+  /**
+   * Farben gruppiert, innerhalb der Farbe von oben nach unten. Bei einem Spiel,
+   * in dem man Stiche vermeiden will, zählt vor allem, wo man kurz ist - das
+   * sieht man so sofort.
+   */
+  sortHand(state, context, _playerId, cardIds) {
+    const suitIndex = (suitId: string | null): number => {
+      const index = context.deck.suits.findIndex((suit) => suit.id === suitId);
+      return index < 0 ? 99 : index;
+    };
+
+    return [...cardIds].sort((left, right) => {
+      const a = state.table.cards[left];
+      const b = state.table.cards[right];
+
+      if (!a || !b) {
+        return 0;
+      }
+
+      if (a.suitId !== b.suitId) {
+        return suitIndex(a.suitId) - suitIndex(b.suitId);
+      }
+
+      return rankOrder(context, b) - rankOrder(context, a);
+    });
   }
 };
 

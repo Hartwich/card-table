@@ -227,7 +227,8 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     extra: {},
     bots,
     botScores,
-    botReadyAt: null
+    botReadyAt: null,
+    lastTrickSerial: 0
   };
 
   return ruleset.setupRound ? ruleset.setupRound(initial, rulesetContext) : initial;
@@ -351,17 +352,28 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
     gameOver: state.gameOver,
     winnerPlayerId: state.winnerPlayerId,
     winnerName: state.winnerName,
-    lastError: state.lastError
+    lastError: state.lastError,
+    lastTrickWinnerId: state.lastTrickWinnerId,
+    lastTrickSerial: state.lastTrickSerial
   };
 }
+
+const handSortSettingValues = ["auto", "dealt"] as const;
 
 function buildHand(
   state: CardGameState,
   ruleset: CardRuleset,
   rulesetContext: CardRulesetContext,
-  playerId: string
+  playerId: string,
+  sorted: boolean
 ): CardTableHandCardState[] {
-  return handOf(state.table, playerId).map((cardId) => {
+  const hand = handOf(state.table, playerId);
+  const ordered =
+    sorted && ruleset.sortHand
+      ? ruleset.sortHand(state, rulesetContext, playerId, hand)
+      : hand;
+
+  return ordered.map((cardId) => {
     const card = state.table.cards[cardId];
     const face = card
       ? toCardFace(rulesetContext.deck, card)
@@ -412,6 +424,11 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
       if (typeof configure.cardStyle === "string") {
         roomSettings[cardTableRoomSettingKeys.cardStyle] =
           cardStyles.find((style) => style === configure.cardStyle) ?? "classic";
+      }
+
+      if (typeof configure.handSort === "string") {
+        roomSettings[cardTableRoomSettingKeys.handSort] =
+          handSortSettingValues.find((value) => value === configure.handSort) ?? "auto";
       }
 
       if (typeof configure.doppelkopfScoring === "string") {
@@ -510,7 +527,9 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
     const publicState = buildPublicState(state, context);
     const ruleset = resolveCardRuleset(state.rulesetId);
     const rulesetContext = buildRulesetContext(state, context);
-    const hand = buildHand(state, ruleset, rulesetContext, playerId);
+    const sortSetting = readSetting(context, cardTableRoomSettingKeys.handSort);
+    const sorted = sortSetting !== "dealt";
+    const hand = buildHand(state, ruleset, rulesetContext, playerId, sorted);
     const pendingChoiceCardIds = hand
       .filter((card) => Boolean(ruleset.choiceForCard(state, rulesetContext, card.cardId)))
       .map((card) => card.cardId);

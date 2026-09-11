@@ -6,7 +6,8 @@ export const cardTableRoomSettingKeys = {
   handSize: "cardTableHandSize",
   cardStyle: "cardTableCardStyle",
   botCount: "cardTableBotCount",
-  doppelkopfScoring: "cardTableDoppelkopfScoring"
+  doppelkopfScoring: "cardTableDoppelkopfScoring",
+  handSort: "cardTableHandSort"
 } as const;
 
 export const cardTableManifest = {
@@ -127,6 +128,23 @@ export const cardTableManifest = {
         max: 12,
         step: 1,
         defaultValue: 5
+      },
+      {
+        kind: "select",
+        id: "handSort",
+        settingKey: cardTableRoomSettingKeys.handSort,
+        actionKey: "handSort",
+        label: "Handkarten sortieren",
+        description: "Ordnet das Blatt auf dem Handy nach Trumpf und Farben statt in der Reihenfolge des Austeilens.",
+        visibleWhen: {
+          field: cardTableRoomSettingKeys.ruleset,
+          anyOf: ["doppelkopf", "herzeln", "stichwette"]
+        },
+        defaultValue: "auto",
+        options: [
+          { id: "auto", label: "Automatisch", description: "Trumpf zuerst, dann die Fehlfarben, je absteigend." },
+          { id: "dealt", label: "Wie ausgeteilt", description: "Karten bleiben in der Reihenfolge liegen, in der sie kamen." }
+        ]
       },
       {
         kind: "select",

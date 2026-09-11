@@ -21,6 +21,7 @@ export function cardTableLabels(language?: CardTableLanguage) {
   return {
     waiting: en ? "Waiting for the card table." : "Warte auf den Kartentisch.",
     rules: en ? "Rules" : "Regeln",
+    lastTrick: en ? "Last trick" : "Letzter Stich",
     bot: en ? "AI" : "KI",
     close: en ? "Close" : "Schließen",
     rulesFor: en ? "Rules" : "Spielregeln"
@@ -66,7 +67,7 @@ function seatHtml(
   ).join("");
   const badge = seat.isBot ? `<em class="ct-seat-bot">${escapeHtml(botLabel)}</em>` : "";
 
-  return `<div class="ct-seat${seat.isActive ? " is-active" : ""}${seat.connected ? "" : " is-away"}${seat.isBot ? " is-bot" : ""}">
+  return `<div class="ct-seat${seat.isActive ? " is-active" : ""}${seat.connected ? "" : " is-away"}${seat.isBot ? " is-bot" : ""}" data-seat="${escapeHtml(seat.playerId)}">
     <span class="ct-seat-dot" style="background:${escapeHtml(seat.color)}"></span>
     <div class="ct-seat-body">
       <span class="ct-seat-name">${escapeHtml(seat.name)}${badge}</span>
@@ -113,10 +114,16 @@ function rulesHtml(state: CardTablePublicState, language: CardTableLanguage | un
 export function renderCardTableHtml(
   state: CardTablePublicState,
   language: CardTableLanguage | undefined,
-  options: { rulesOpen?: boolean } = {}
+  options: { rulesOpen?: boolean; lastTrickOpen?: boolean } = {}
 ): string {
   const text = cardTableLabels(language);
-  const cardWidth = cardWidthFor(state.stacks);
+  // Stapel, die nur auf Anforderung erscheinen, belegen den Tisch nicht -
+  // weder mit Karten noch mit Breite.
+  const onDemand = state.stacks.filter((stack) => stack.onDemand && stack.count > 0);
+  const stacks = options.lastTrickOpen
+    ? state.stacks.filter((stack) => stack.count > 0 || !stack.onDemand)
+    : state.stacks.filter((stack) => !stack.onDemand);
+  const cardWidth = cardWidthFor(stacks);
   const condition = state.conditionLabel
     ? `<span class="ct-chip">${escapeHtml(`${state.conditionSymbol ?? ""} ${state.conditionLabel}`.trim())}</span>`
     : "";
@@ -131,11 +138,16 @@ export function renderCardTableHtml(
         ${error}
         ${condition}
         <span class="ct-meta">${state.direction === 1 ? "→" : "←"}</span>
+        ${
+          onDemand.length > 0
+            ? `<button type="button" class="ct-rules-button${options.lastTrickOpen ? " is-on" : ""}" data-card-table-panel="last-trick">${escapeHtml(text.lastTrick)}</button>`
+            : ""
+        }
         <button type="button" class="ct-rules-button" data-card-table-panel="rules">${escapeHtml(text.rules)}</button>
       </div>
     </header>
     <div class="ct-seats">${state.seats.map((seat) => seatHtml(seat, state.backStyle, text.bot)).join("")}</div>
-    <div class="ct-stacks">${state.stacks.map((stack) => stackHtml(stack, state.backStyle, cardWidth, state.cardStyle)).join("")}</div>
+    <div class="ct-stacks">${stacks.map((stack) => stackHtml(stack, state.backStyle, cardWidth, state.cardStyle)).join("")}</div>
     <footer class="ct-actions">${state.hostActions.map(actionHtml).join("")}</footer>
   </div>
   ${options.rulesOpen ? rulesHtml(state, language) : ""}`;
@@ -162,6 +174,10 @@ export const cardTableStyles = `
   font-family:var(--ct-body);font-size:.82rem;font-weight:600;color:#f7f1e7;
   border:1px solid rgba(255,251,244,.45);background:rgba(43,38,32,.55)}
 .ct-rules-button:hover{background:rgba(43,38,32,.85);border-color:rgba(255,251,244,.8)}
+.ct-rules-button.is-on{background:var(--ct-accent);border-color:#fffbf4}
+.ct-ghosts{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.ct-ghost{position:absolute;transform-origin:center;will-change:transform,opacity;
+  filter:drop-shadow(0 8px 14px rgba(0,0,0,.35))}
 .ct-seats{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .ct-seat{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;min-width:190px;
   background:rgba(43,38,32,.72);border:1px solid rgba(255,255,255,.14);color:#f7f1e7}
