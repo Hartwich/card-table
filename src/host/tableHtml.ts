@@ -36,11 +36,16 @@ export function cardTableLabels(language?: CardTableLanguage) {
  * soll auf einen Blick passen, statt umzubrechen.
  */
 function cardWidthFor(stacks: CardTablePublicState["stacks"]): number {
-  const columns = stacks.reduce(
-    (sum, stack) =>
-      sum + (stack.layout === "spread" ? Math.max(1, stack.cards.length * 0.55) : 1),
-    0
-  );
+  const columns = stacks.reduce((sum, stack) => {
+    if (stack.layout !== "spread") {
+      return sum + 1;
+    }
+
+    // Nach Kapazität rechnen, damit die Reihe beim Füllen nicht springt.
+    const slots = Math.max(stack.capacity ?? stack.cards.length, stack.cards.length, 1);
+
+    return sum + slots * 0.55;
+  }, 0);
 
   if (columns <= 2) {
     return 200;
@@ -200,6 +205,7 @@ export const cardTableStyles = `
 .ct-stack-cards.is-pile{position:relative}
 .ct-stack-cards.is-pile .ct-layer{position:absolute;left:0;top:0}
 .ct-fan,.ct-layer{display:block;position:relative;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35))}
+.ct-fan[data-owner]{border-radius:12px;box-shadow:0 0 0 3px var(--ct-owner),0 0 0 5px rgba(0,0,0,.25)}
 .ct-fan[data-top]{filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
 .ct-slot{display:block;border-radius:10px;border:2px dashed rgba(247,241,231,.35);background:rgba(255,255,255,.06)}
 .ct-stack-label{display:inline-flex;gap:8px;align-items:baseline;color:#f3ece0;font-size:1rem;

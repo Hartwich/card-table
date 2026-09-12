@@ -19,6 +19,13 @@ export interface CardTableCardState {
   color: CardColor;
   centerLabel?: string;
   points?: number;
+  /**
+   * Farbe des Spielers, der diese Karte gelegt hat.
+   *
+   * Der Tisch umrandet sie damit - in einem Stich aus vier Karten ist sonst
+   * nicht zu sehen, wer was geworfen hat.
+   */
+  ownerColor?: string;
 }
 
 export interface CardTableHandCardState extends CardTableCardState {
@@ -52,6 +59,13 @@ export interface CardTableStackState {
   faceDown: boolean;
   /** Zeichenweise; ohne Angabe `pile`. */
   layout?: CardTableStackLayout;
+  /**
+   * Wie viele Karten dieser Stapel höchstens zeigt.
+   *
+   * Die Kartenbreite richtet sich danach und nicht nach dem aktuellen Inhalt -
+   * sonst würden die Karten kleiner, sobald die letzte in den Stich fällt.
+   */
+  capacity?: number;
   /**
    * Nur auf Anforderung sichtbar.
    *

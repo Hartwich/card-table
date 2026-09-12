@@ -10,6 +10,7 @@ import {
   isTrickPending,
   sweepTrick,
   toggleLastTrick,
+  trickFaces,
   trickWinnerId
 } from "./trickPause.js";
 import {
@@ -61,6 +62,8 @@ const tricksKey = (playerId: string): string => `tricks:${playerId}`;
 const partyKey = (playerId: string): string => `party:${playerId}`;
 const reserveKey = (playerId: string): string => `reserve:${playerId}`;
 const announceKey = (playerId: string): string => `say:${playerId}`;
+const revealKey = (playerId: string): string => `reveal:${playerId}`;
+const queensShownKey = "queensShown";
 
 const noLead = "";
 const trumpLead = "*";
@@ -411,6 +414,35 @@ function isReservePhase(state: CardGameState): boolean {
 
 function isActive(state: CardGameState, playerId: string): boolean {
   return state.table.turnOrder[state.table.activeIndex] === playerId;
+}
+
+/**
+ * Wer sich öffentlich gezeigt hat.
+ *
+ * Die Parteien bleiben verdeckt, bis sie sich von selbst ergeben: Wer eine
+ * Kreuz-Dame legt, ist Re; wer Re oder Kontra ansagt, bekennt sich ebenfalls.
+ * Und sobald beide Kreuz-Damen gefallen sind, stehen auch die übrigen zwei
+ * fest. Geraten wird hier nichts - gezeigt wird nur, was am Tisch zu sehen war.
+ */
+function isRevealed(state: CardGameState, playerId: string): boolean {
+  return state.extra[revealKey(playerId)] === true;
+}
+
+/** Deckt einen Sitz auf; sind beide Alten heraus, gilt es für alle. */
+function reveal(state: CardGameState, playerId: string, viaQueen: boolean): CardGameState {
+  const shown = readNumber(state, queensShownKey) + (viaQueen ? 1 : 0);
+  const values: Record<string, number | string | boolean | null> = {
+    [revealKey(playerId)]: true,
+    [queensShownKey]: shown
+  };
+
+  if (shown >= 2) {
+    for (const seatId of state.table.turnOrder) {
+      values[revealKey(seatId)] = true;
+    }
+  }
+
+  return writeExtra(state, values);
 }
 
 /** Liegen angesagte Schweinchen auf dem Tisch? */
@@ -913,7 +945,8 @@ export const doppelkopfRuleset: CardRuleset = {
       [soloSuitKey]: "diamonds",
       [partnerKey]: null,
       "bonus:re": 0,
-      "bonus:kontra": 0
+      "bonus:kontra": 0,
+      [queensShownKey]: 0
     };
 
     for (const playerId of state.table.turnOrder) {
@@ -922,6 +955,7 @@ export const doppelkopfRuleset: CardRuleset = {
       counters[partyKey(playerId)] = false;
       counters[reserveKey(playerId)] = null;
       counters[announceKey(playerId)] = 0;
+      counters[revealKey(playerId)] = false;
     }
 
     // Hausregeln einmal festschreiben - ab hier gelten sie für den Durchgang.
@@ -1150,6 +1184,11 @@ export const doppelkopfRuleset: CardRuleset = {
       `${text.plays} ${face.rankLabel} ${face.suitSymbol}`
     );
 
+    // Eine Kreuz-Dame auf dem Tisch verrät ihren Halter als Re.
+    if (isClubQueen(card) && !isSolo(kind)) {
+      next = reveal(next, playerId, true);
+    }
+
     if (wasEmpty) {
       next = writeExtra(next, {
         [leadKey]: isTrump(card, kind, trumpSuit) ? trumpLead : card.suitId ?? noLead,
@@ -1190,7 +1229,7 @@ export const doppelkopfRuleset: CardRuleset = {
       announceLevelOf(next, winnerId) === 0
     ) {
       next = appendLog(
-        writeExtra(next, { [announceKey(winnerId)]: 1 }),
+        reveal(writeExtra(next, { [announceKey(winnerId)]: 1 }), winnerId, false),
         playerName(context, winnerId),
         `${text.forcedSay}: ${announceLabel(1, isRe(next, winnerId), context)}`
       );
@@ -1296,7 +1335,7 @@ export const doppelkopfRuleset: CardRuleset = {
       }
 
       return appendLog(
-        clearError(writeExtra(state, { [announceKey(playerId)]: level })),
+        clearError(reveal(writeExtra(state, { [announceKey(playerId)]: level }), playerId, false)),
         playerName(context, playerId),
         `${text.announces} ${announceLabel(level, re, context)}`
       );
@@ -1384,8 +1423,9 @@ export const doppelkopfRuleset: CardRuleset = {
         .map((cardId) => state.table.cards[cardId])
         .filter((card): card is CardInstance => Boolean(card))
         .map((card) => toCardFace(context.deck, card));
-    const trick = faces(trickZoneId);
+    const trick = trickFaces(state, context, trickZoneId, readNumber(state, trickLeaderKey));
     const last = faces(lastTrickZoneId);
+    const seats = state.table.turnOrder.length;
     const lastWinnerId = trickWinnerId(state);
 
     return [
@@ -1396,7 +1436,8 @@ export const doppelkopfRuleset: CardRuleset = {
         count: trick.length,
         cards: trick,
         faceDown: false,
-        layout: "spread"
+        layout: "spread",
+        capacity: seats
       },
       {
         // Immer vorhanden, damit der Knopf am Host nicht erst nach dem ersten
@@ -1411,6 +1452,7 @@ export const doppelkopfRuleset: CardRuleset = {
         cards: last,
         faceDown: false,
         layout: "spread",
+        capacity: seats,
         onDemand: true
       }
     ];
@@ -1479,24 +1521,33 @@ export const doppelkopfRuleset: CardRuleset = {
       return reservation ? reservationLabel(reservation, context) : undefined;
     }
 
+    if (state.gameOver) {
+      return `${isRe(state, playerId) ? text.re : text.kontra} · ${pointsOf(state, playerId)}`;
+    }
+
+    // Krone, Ansage und Augen stehen nebeneinander - eine Ansage darf den
+    // Punktestand nicht verdecken, beides will man gleichzeitig sehen.
+    const parts: string[] = [];
+
+    if (isRevealed(state, playerId) && isRe(state, playerId)) {
+      parts.push("♛");
+    }
+
     const level = announceLevelOf(state, playerId);
 
     if (level > 0) {
-      return announceLabel(level, isRe(state, playerId), context);
+      parts.push(announceLabel(level, isRe(state, playerId), context));
     }
 
-    // Die Parteien bleiben verdeckt, bis abgerechnet wird - und wer erst am
-    // Ende auszählen lässt, sieht bis dahin auch keine Augen.
-    if (!state.gameOver) {
-      if (!countsLive(context)) {
-        return undefined;
-      }
-
+    if (countsLive(context)) {
       const points = pointsOf(state, playerId);
-      return points > 0 ? `${points}` : undefined;
+
+      if (points > 0) {
+        parts.push(`${points}`);
+      }
     }
 
-    return `${isRe(state, playerId) ? text.re : text.kontra} · ${pointsOf(state, playerId)}`;
+    return parts.length > 0 ? parts.join(" · ") : undefined;
   },
 
   tick(state, context) {

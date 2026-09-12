@@ -140,147 +140,7 @@ export const cardTableManifest = {
         defaultValue: 5
       },
       {
-        kind: "select",
-        id: "dokoNines",
-        settingKey: cardTableRoomSettingKeys.dokoNines,
-        actionKey: "dokoNines",
-        label: "Doppelkopf: Blatt",
-        description: "Mit Neunen sind es 48 Karten, ohne Neunen 40 - dann ist der Karo-König der kleinste Trumpf.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "with",
-        options: [
-          { id: "with", label: "Mit Neunen (48)", description: "Das übliche Turnierblatt, 240 Augen." },
-          { id: "without", label: "Ohne Neunen (40)", description: "Kürzere Runden, jeder Stich wiegt schwerer." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoSecondDulle",
-        settingKey: cardTableRoomSettingKeys.dokoSecondDulle,
-        actionKey: "dokoSecondDulle",
-        label: "Zweite Dulle sticht",
-        description: "Fallen beide Herz-Zehnen in einen Stich, gewinnt sonst die erste.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "off",
-        options: [
-          { id: "off", label: "Erste sticht", description: "Regelfall: Die zuerst gelegte Dulle gewinnt." },
-          { id: "on", label: "Zweite sticht", description: "Hausregel, die der Re-Partei nützt." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoDoppelkopf",
-        settingKey: cardTableRoomSettingKeys.dokoDoppelkopf,
-        actionKey: "dokoDoppelkopf",
-        label: "Doppelkopf (40+ Augen)",
-        description: "Ein Stich mit 40 oder mehr Augen bringt einen Sonderpunkt.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "on",
-        options: [
-          { id: "on", label: "Zählt", description: "Turnierregel." },
-          { id: "off", label: "Zählt nicht", description: "Nur die Augen entscheiden." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoFox",
-        settingKey: cardTableRoomSettingKeys.dokoFox,
-        actionKey: "dokoFox",
-        label: "Fuchs gefangen",
-        description: "Ein Karo-Ass der Gegenpartei zu stechen bringt einen Sonderpunkt.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "on",
-        options: [
-          { id: "on", label: "Zählt", description: "Turnierregel." },
-          { id: "off", label: "Zählt nicht", description: "Ohne diesen Sonderpunkt." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoCharlie",
-        settingKey: cardTableRoomSettingKeys.dokoCharlie,
-        actionKey: "dokoCharlie",
-        label: "Karlchen im letzten",
-        description: "Der Kreuz-Bube im letzten Stich bringt einen Sonderpunkt.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "on",
-        options: [
-          { id: "on", label: "Zählt", description: "Turnierregel." },
-          { id: "off", label: "Zählt nicht", description: "Ohne diesen Sonderpunkt." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoFoxEnd",
-        settingKey: cardTableRoomSettingKeys.dokoFoxEnd,
-        actionKey: "dokoFoxEnd",
-        label: "Fuchs am End",
-        description: "Ein Karo-Ass im letzten Stich bringt zusätzlich einen Sonderpunkt.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "off",
-        options: [
-          { id: "off", label: "Zählt nicht", description: "Nicht im Turnier enthalten." },
-          { id: "on", label: "Zählt", description: "Verbreitete Hausregel." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoPigs",
-        settingKey: cardTableRoomSettingKeys.dokoPigs,
-        actionKey: "dokoPigs",
-        label: "Schweinchen",
-        description: "Wer beide Karo-Asse hält, hat damit die beiden höchsten Trümpfe.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "off",
-        options: [
-          { id: "off", label: "Aus", description: "Die Karo-Asse sind normaler Trumpf." },
-          { id: "on", label: "An", description: "Schweinchen stehen über der Dulle." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoAgainstOld",
-        settingKey: cardTableRoomSettingKeys.dokoAgainstOld,
-        actionKey: "dokoAgainstOld",
-        label: "Gegen die Alten",
-        description: "Gewinnt Kontra, gibt es einen Sonderpunkt dazu.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "on",
-        options: [
-          { id: "on", label: "Zählt", description: "Turnierregel." },
-          { id: "off", label: "Zählt nicht", description: "Ohne diesen Sonderpunkt." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoBock",
-        settingKey: cardTableRoomSettingKeys.dokoBock,
-        actionKey: "dokoBock",
-        label: "Bockrunde",
-        description: "Nach verlorenem Re oder einer schwarzen Partei zählt die nächste Runde doppelt.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "off",
-        options: [
-          { id: "off", label: "Aus", description: "Jede Runde zählt gleich." },
-          { id: "on", label: "An", description: "Die Folgerunde zählt doppelt." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "dokoForced",
-        settingKey: cardTableRoomSettingKeys.dokoForced,
-        actionKey: "dokoForced",
-        label: "Pflichtansage ab 35 Augen",
-        description: "Liegen im ersten Stich 35 oder mehr Augen, legt der Gewinner seine Partei offen.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "off",
-        options: [
-          { id: "off", label: "Aus", description: "Ansagen bleiben freiwillig." },
-          { id: "on", label: "An", description: "Der Gewinner muss Re oder Kontra sagen." }
-        ]
-      },
-      {
-        kind: "select",
+        kind: "toggle",
         id: "handSort",
         settingKey: cardTableRoomSettingKeys.handSort,
         actionKey: "handSort",
@@ -290,25 +150,9 @@ export const cardTableManifest = {
           field: cardTableRoomSettingKeys.ruleset,
           anyOf: ["doppelkopf", "herzeln", "stichwette"]
         },
-        defaultValue: "auto",
-        options: [
-          { id: "auto", label: "Automatisch", description: "Trumpf zuerst, dann die Fehlfarben, je absteigend." },
-          { id: "dealt", label: "Wie ausgeteilt", description: "Karten bleiben in der Reihenfolge liegen, in der sie kamen." }
-        ]
-      },
-      {
-        kind: "select",
-        id: "doppelkopfScoring",
-        settingKey: cardTableRoomSettingKeys.doppelkopfScoring,
-        actionKey: "doppelkopfScoring",
-        label: "Augen zählen",
-        description: "Laufend mitzählen oder erst am Ende auszählen, wie am echten Tisch.",
-        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
-        defaultValue: "live",
-        options: [
-          { id: "live", label: "Laufend zählen", description: "Jeder Stich zeigt seine Augen, der Sitzplatz den Stand." },
-          { id: "end", label: "Erst am Ende", description: "Während der Runde keine Zahlen - abgerechnet wird zum Schluss." }
-        ]
+        onValue: "auto",
+        offValue: "dealt",
+        defaultValue: "auto"
       },
       {
         kind: "number",
@@ -322,6 +166,149 @@ export const cardTableManifest = {
         max: 5,
         step: 1,
         defaultValue: 0
+      },
+      {
+        kind: "toggle",
+        id: "dokoNines",
+        settingKey: cardTableRoomSettingKeys.dokoNines,
+        actionKey: "dokoNines",
+        label: "Ohne Neunen (40 Karten)",
+        description: "Karo-König wird kleinster Trumpf, die Runden werden kürzer.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "without",
+        offValue: "with",
+        defaultValue: "with"
+      },
+      {
+        kind: "toggle",
+        id: "dokoSecondDulle",
+        settingKey: cardTableRoomSettingKeys.dokoSecondDulle,
+        actionKey: "dokoSecondDulle",
+        label: "Zweite Dulle sticht",
+        description: "Fallen beide Herz-Zehnen in einen Stich, gewinnt die zweite.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "off"
+      },
+      {
+        kind: "toggle",
+        id: "dokoDoppelkopf",
+        settingKey: cardTableRoomSettingKeys.dokoDoppelkopf,
+        actionKey: "dokoDoppelkopf",
+        label: "Doppelkopf (40+ Augen)",
+        description: "Sonderpunkt für einen Stich mit 40 oder mehr Augen.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "on"
+      },
+      {
+        kind: "toggle",
+        id: "dokoFox",
+        settingKey: cardTableRoomSettingKeys.dokoFox,
+        actionKey: "dokoFox",
+        label: "Fuchs gefangen",
+        description: "Sonderpunkt für ein gestochenes Karo-Ass der Gegenpartei.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "on"
+      },
+      {
+        kind: "toggle",
+        id: "dokoCharlie",
+        settingKey: cardTableRoomSettingKeys.dokoCharlie,
+        actionKey: "dokoCharlie",
+        label: "Karlchen im letzten",
+        description: "Sonderpunkt für den Kreuz-Buben im letzten Stich.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "on"
+      },
+      {
+        kind: "toggle",
+        id: "dokoFoxEnd",
+        settingKey: cardTableRoomSettingKeys.dokoFoxEnd,
+        actionKey: "dokoFoxEnd",
+        label: "Fuchs am End",
+        description: "Sonderpunkt für ein Karo-Ass im letzten Stich.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "off"
+      },
+      {
+        kind: "toggle",
+        id: "dokoPigs",
+        settingKey: cardTableRoomSettingKeys.dokoPigs,
+        actionKey: "dokoPigs",
+        label: "Schweinchen",
+        description: "Beide Karo-Asse auf einer Hand werden die höchsten Trümpfe.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "off"
+      },
+      {
+        kind: "toggle",
+        id: "dokoAgainstOld",
+        settingKey: cardTableRoomSettingKeys.dokoAgainstOld,
+        actionKey: "dokoAgainstOld",
+        label: "Gegen die Alten",
+        description: "Sonderpunkt, wenn Kontra gewinnt.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "on"
+      },
+      {
+        kind: "toggle",
+        id: "dokoBock",
+        settingKey: cardTableRoomSettingKeys.dokoBock,
+        actionKey: "dokoBock",
+        label: "Bockrunde",
+        description: "Nach verlorenem Re oder schwarzer Partei zählt die Folgerunde doppelt.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "off"
+      },
+      {
+        kind: "toggle",
+        id: "dokoForced",
+        settingKey: cardTableRoomSettingKeys.dokoForced,
+        actionKey: "dokoForced",
+        label: "Pflichtansage ab 35 Augen",
+        description: "Der Gewinner des ersten Stichs legt seine Partei offen.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "off"
+      },
+      {
+        kind: "toggle",
+        id: "doppelkopfScoring",
+        settingKey: cardTableRoomSettingKeys.doppelkopfScoring,
+        actionKey: "doppelkopfScoring",
+        label: "Augen erst am Ende zählen",
+        description: "Während der Runde keine Zahlen - abgerechnet wird zum Schluss.",
+        group: "Doppelkopf-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["doppelkopf"] },
+        onValue: "end",
+        offValue: "live",
+        defaultValue: "live"
       },
       {
         kind: "select",

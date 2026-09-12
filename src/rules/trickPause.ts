@@ -1,4 +1,6 @@
-import { moveCard } from "../cards/cardTable.js";
+import { moveCard, toCardFace } from "../cards/cardTable.js";
+import type { CardInstance } from "../cards/cardTypes.js";
+import type { CardTableCardState } from "../protocol.js";
 import {
   readNumber,
   readText,
@@ -115,6 +117,42 @@ export function toggleLastTrick(state: CardGameState): CardGameState {
 /** Versteckt ihn wieder - sobald weitergespielt wird. */
 export function hideLastTrick(state: CardGameState): CardGameState {
   return state.showOnDemand ? { ...state, showOnDemand: false } : state;
+}
+
+/**
+ * Die Karten eines laufenden Stichs, jede mit der Farbe dessen, der sie gelegt
+ * hat.
+ *
+ * Vier Karten nebeneinander sagen sonst nicht, wer was geworfen hat - und genau
+ * das will man beim Zuschauen wissen. Die Reihenfolge in der Zone ist die
+ * Spielreihenfolge, also lässt sich der Besitzer aus dem Anspieler ableiten.
+ */
+export function trickFaces(
+  state: CardGameState,
+  context: CardRulesetContext,
+  zoneId: string,
+  leaderIndex: number
+): CardTableCardState[] {
+  const order = state.table.turnOrder;
+
+  const faces: CardTableCardState[] = [];
+
+  (state.table.zones[zoneId] ?? []).forEach((cardId, index) => {
+    const card = state.table.cards[cardId] as CardInstance | undefined;
+
+    if (!card) {
+      return;
+    }
+
+    const ownerId = order.length > 0 ? order[(leaderIndex + index) % order.length] : undefined;
+
+    faces.push({
+      ...toCardFace(context.deck, card),
+      ownerColor: ownerId ? context.playerColors[ownerId] : undefined
+    });
+  });
+
+  return faces;
 }
 
 /** Hält niemand mehr Karten? Dann ist der Durchgang vorbei. */

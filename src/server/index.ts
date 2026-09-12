@@ -1,3 +1,4 @@
+import type { GameLobbySetupField } from "@open-party-lab/game-core";
 import {
   createBaseRoundState,
   roundPhaseDurations,
@@ -174,10 +175,12 @@ function carryBotScores(context: ServerGameContext, bots: CardBotSeat[]): Record
 
 function buildRulesetContext(state: CardGameState, context: ServerGameContext): CardRulesetContext {
   const playerNames: Record<string, string> = {};
+  const playerColors: Record<string, string> = {};
   const scores: Record<string, number> = {};
 
   for (const player of context.players) {
     playerNames[player.id] = player.name;
+    playerColors[player.id] = player.color;
     scores[player.id] = player.score;
   }
 
@@ -185,6 +188,7 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
 
   for (const bot of state.bots) {
     playerNames[bot.id] = bot.name;
+    playerColors[bot.id] = bot.color;
     scores[bot.id] = totals[bot.id] ?? 0;
   }
 
@@ -193,6 +197,7 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
     language: context.language,
     now: context.now,
     playerNames,
+    playerColors,
     scores,
     settings: context.roomSettings,
     previousExtra: previousExtraOf(context)
@@ -219,6 +224,10 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     playerNames: {
       ...Object.fromEntries(context.players.map((player) => [player.id, player.name])),
       ...Object.fromEntries(bots.map((bot) => [bot.id, bot.name]))
+    },
+    playerColors: {
+      ...Object.fromEntries(context.players.map((player) => [player.id, player.color])),
+      ...Object.fromEntries(bots.map((bot) => [bot.id, bot.color]))
     },
     scores: {
       ...Object.fromEntries(context.players.map((player) => [player.id, player.score])),
@@ -436,44 +445,61 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
         return {};
       }
 
-      const configure = hostAction as CardTableConfigureLobbyAction;
+      const configure = hostAction as Record<string, unknown>;
       const roomSettings: Record<string, unknown> = {};
 
+      // Manifestgetrieben statt Feld für Feld von Hand: Jedes Lobby-Feld nennt
+      // seinen actionKey und seinen settingKey selbst. So kann kein neu
+      // hinzugefügtes Feld mehr vergessen werden - genau das war bei den
+      // Doppelkopf-Hausregeln passiert, und es fällt nicht auf, weil ein
+      // ignoriertes Feld keine Fehlermeldung erzeugt, sondern einfach nichts tut.
+      const fields = cardTableManifest.lobbySetup.fields as readonly GameLobbySetupField[];
+
+      for (const field of fields) {
+        const value = configure[field.actionKey ?? field.id];
+
+        if (value === undefined) {
+          continue;
+        }
+
+        if (field.kind === "number") {
+          if (typeof value !== "number" || !Number.isFinite(value)) {
+            continue;
+          }
+
+          roomSettings[field.settingKey ?? field.id] = Math.max(
+            field.min,
+            Math.min(field.max, Math.round(value))
+          );
+          continue;
+        }
+
+        if (typeof value !== "string") {
+          continue;
+        }
+
+        // Nur Werte, die das Feld auch anbietet - der Client bestimmt nicht,
+        // was in den Raumeinstellungen landet.
+        const allowed =
+          field.kind === "toggle"
+            ? value === field.onValue || value === field.offValue
+            : field.options.some((option) => option.id === value);
+
+        if (!allowed) {
+          continue;
+        }
+
+        roomSettings[field.settingKey ?? field.id] = value;
+      }
+
+      // Zwei Felder brauchen eine Normalisierung, weil hinter ihnen eine
+      // Auflösung steht und nicht nur ein Wort.
       if (typeof configure.ruleset === "string") {
         roomSettings[cardTableRoomSettingKeys.ruleset] = resolveCardRuleset(configure.ruleset).id;
       }
 
       if (typeof configure.deck === "string") {
         roomSettings[cardTableRoomSettingKeys.deck] = resolveCardDeck(configure.deck).id;
-      }
-
-      if (typeof configure.cardStyle === "string") {
-        roomSettings[cardTableRoomSettingKeys.cardStyle] =
-          cardStyles.find((style) => style === configure.cardStyle) ?? "classic";
-      }
-
-      if (typeof configure.handSort === "string") {
-        roomSettings[cardTableRoomSettingKeys.handSort] =
-          handSortSettingValues.find((value) => value === configure.handSort) ?? "auto";
-      }
-
-      if (typeof configure.doppelkopfScoring === "string") {
-        roomSettings[cardTableRoomSettingKeys.doppelkopfScoring] =
-          configure.doppelkopfScoring === "end" ? "end" : "live";
-      }
-
-      if (typeof configure.botCount === "number" && Number.isFinite(configure.botCount)) {
-        roomSettings[cardTableRoomSettingKeys.botCount] = Math.max(
-          0,
-          Math.min(maxBotSeats, Math.round(configure.botCount))
-        );
-      }
-
-      if (typeof configure.handSize === "number" && Number.isFinite(configure.handSize)) {
-        roomSettings[cardTableRoomSettingKeys.handSize] = Math.max(
-          minHandSize,
-          Math.min(maxHandSize, Math.round(configure.handSize))
-        );
       }
 
       return { roomSettings };

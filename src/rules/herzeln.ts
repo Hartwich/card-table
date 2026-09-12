@@ -14,6 +14,7 @@ import {
   isTrickPending,
   sweepTrick,
   toggleLastTrick,
+  trickFaces,
   trickWinnerId
 } from "./trickPause.js";
 import {
@@ -501,11 +502,9 @@ export const herzelnRuleset: CardRuleset = {
 
   tableStacks(state, context): CardTableStackState[] {
     const text = words(context);
-    const cards = trickCardIds(state)
-      .map((cardId) => state.table.cards[cardId])
-      .filter((card): card is CardInstance => Boolean(card))
-      .map((card) => toCardFace(context.deck, card));
+    const cards = trickFaces(state, context, trickZoneId, readNumber(state, trickLeaderKey));
     const total = readNumber(state, trickCountKey);
+    const seats = state.table.turnOrder.length;
 
     const stacks: CardTableStackState[] = [
       {
@@ -515,7 +514,8 @@ export const herzelnRuleset: CardRuleset = {
         count: cards.length,
         cards,
         faceDown: false,
-        layout: "spread"
+        layout: "spread",
+        capacity: seats
       }
     ];
 
@@ -539,6 +539,7 @@ export const herzelnRuleset: CardRuleset = {
         cards: lastCards,
         faceDown: false,
         layout: "spread",
+        capacity: seats,
         onDemand: true
       });
     }

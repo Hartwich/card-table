@@ -73,6 +73,8 @@ export interface CardRulesetContext {
   language: SupportedLanguage;
   now: number;
   playerNames: Record<string, string>;
+  /** Sitzfarben - für die Umrandung gelegter Karten. */
+  playerColors: Record<string, string>;
   scores: Record<string, number>;
   /**
    * Die Raumeinstellungen aus dem Host-Setup, unverändert.

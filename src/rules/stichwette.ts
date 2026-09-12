@@ -10,6 +10,7 @@ import {
   isTrickPending,
   sweepTrick,
   toggleLastTrick,
+  trickFaces,
   trickWinnerId
 } from "./trickPause.js";
 import {
@@ -623,25 +624,27 @@ export const trickBetRuleset: CardRuleset = {
         .map((cardId) => state.table.cards[cardId])
         .filter((card): card is CardInstance => Boolean(card))
         .map((card) => toCardFace(context.deck, card));
-    const trumpFaces = faces(trumpZoneId);
-    const trickFaces = faces(trickZoneId);
+    const trumpCards = faces(trumpZoneId);
+    const trickCards = trickFaces(state, context, trickZoneId, readNumber(state, trickLeaderKey));
+    const seats = state.table.turnOrder.length;
     const stacks: CardTableStackState[] = [
       {
         id: trumpZoneId,
         label: text.trump as string,
         kind: "zone",
-        count: trumpFaces.length,
-        cards: trumpFaces,
+        count: trumpCards.length,
+        cards: trumpCards,
         faceDown: false
       },
       {
         id: trickZoneId,
         label: `${text.trick} ${Math.min(readNumber(state, trickCountKey) + 1, readNumber(state, dealSizeKey, state.handSize))}/${readNumber(state, dealSizeKey, state.handSize)}`,
         kind: "zone",
-        count: trickFaces.length,
-        cards: trickFaces,
+        count: trickCards.length,
+        cards: trickCards,
         faceDown: false,
-        layout: "spread"
+        layout: "spread",
+        capacity: seats
       }
     ];
 
@@ -665,6 +668,7 @@ export const trickBetRuleset: CardRuleset = {
         cards: lastCards,
         faceDown: false,
         layout: "spread",
+        capacity: seats,
         onDemand: true
       });
     }

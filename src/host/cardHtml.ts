@@ -81,9 +81,11 @@ export function stackHtml(
     body = `<div class="ct-stack-cards is-pile" style="width:${cardWidth}px;height:${cardHeight}px">${inner}</div>`;
   } else if (stack.layout === "spread") {
     // Auslage: Ein Stich liegt vollständig auf dem Tisch, in Spielreihenfolge
-    // von links nach rechts. Je mehr Karten, desto schmaler - sonst passt die
-    // Reihe irgendwann nicht mehr neben die anderen Stapel.
-    const scale = Math.min(1, Math.max(0.62, 3 / Math.max(1, stack.cards.length)));
+    // von links nach rechts. Die Breite richtet sich nach der Kapazität, nicht
+    // nach dem aktuellen Inhalt - sonst schrumpften die Karten in dem Moment,
+    // in dem die letzte in den Stich fällt.
+    const slots = Math.max(stack.capacity ?? stack.cards.length, stack.cards.length, 1);
+    const scale = Math.min(1, Math.max(0.62, 3 / slots));
     const width = Math.round(cardWidth * scale);
     const inner =
       stack.cards.length === 0
@@ -91,7 +93,10 @@ export function stackHtml(
         : stack.cards
             .map((card, index) => {
               const shift = index === 0 ? 0 : Math.round(width * -0.18);
-              return `<span class="ct-fan" style="margin-left:${shift}px;z-index:${index + 1}">${cardFaceHtml(card, width, cardStyle)}</span>`;
+              const ring = card.ownerColor
+                ? ` data-owner="1" style="margin-left:${shift}px;z-index:${index + 1};--ct-owner:${escapeHtml(card.ownerColor)}"`
+                : ` style="margin-left:${shift}px;z-index:${index + 1}"`;
+              return `<span class="ct-fan"${ring}>${cardFaceHtml(card, width, cardStyle)}</span>`;
             })
             .join("");
 
