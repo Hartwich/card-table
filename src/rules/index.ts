@@ -20,7 +20,7 @@ export { luegenRuleset } from "./luegen.js";
 export { schwarzerPeterRuleset } from "./schwarzerPeter.js";
 export { fischenRuleset } from "./fischen.js";
 export { herzelnRuleset } from "./herzeln.js";
-export { doppelkopfRuleset, isDoppelkopfTrump } from "./doppelkopf.js";
+export { doppelkopfRuleset } from "./doppelkopf.js";
 
 /** Alle verfügbaren Regelwerke. Ein neues Kartenspiel wird hier eingetragen. */
 export const cardRulesets: CardRuleset[] = [

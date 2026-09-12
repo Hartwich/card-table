@@ -4,6 +4,15 @@ import type { CardInstance } from "../cards/cardTypes.js";
 import type { CardTableActionState, CardTableStackState } from "../protocol.js";
 import { bestOf } from "../bots/tactics.js";
 import {
+  beginTrickPause,
+  handsEmpty,
+  hideLastTrick,
+  isTrickPending,
+  sweepTrick,
+  toggleLastTrick,
+  trickWinnerId
+} from "./trickPause.js";
+import {
   appendLog,
   clearError,
   finishGame,
@@ -34,7 +43,6 @@ const trickZoneId = "stich";
 const trumpZoneId = "trumpf";
 const wonZoneId = "abgelegt";
 const lastTrickZoneId = "letzter-stich";
-const lastTrickWinnerKey = "lastTrickWinner";
 const deckSize = 60;
 
 const phaseKey = "phase";
@@ -71,6 +79,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     wins: "holt den Durchgang.",
     trick: "Stich",
     lastTrick: "Letzter Stich",
+    trickResting: "Der Stich liegt noch - kurz warten.",
     waiting: "wartet"
   },
   en: {
@@ -94,6 +103,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     wins: "takes the deal.",
     trick: "Trick",
     lastTrick: "Last trick",
+    trickResting: "The trick is still on the table.",
     waiting: "waiting"
   }
 };
@@ -393,6 +403,11 @@ export const trickBetRuleset: CardRuleset = {
       return { allowed: false, hint: text.notInHand as string };
     }
 
+    // Solange der fertige Stich noch offen liegt, wird nicht weitergespielt.
+    if (isTrickPending(state)) {
+      return { allowed: false, hint: text.trickResting as string };
+    }
+
     if (isBidding(state)) {
       return { allowed: false, hint: text.bidFirst as string };
     }
@@ -472,35 +487,17 @@ export const trickBetRuleset: CardRuleset = {
     const winnerId = trickWinner(next, context);
     const winnerIndex = Math.max(0, next.table.turnOrder.indexOf(winnerId));
     const played = trickCardIds(next);
-    let cleared = next.table;
-
-    // Der vorige Stich hat lange genug offen gelegen - er wandert jetzt ins
-    // Archiv, damit der gerade fertige seinen Platz bekommt.
-    for (const archivedId of [...(cleared.zones[lastTrickZoneId] ?? [])]) {
-      cleared = moveCard(cleared, archivedId, { kind: "zone", zoneId: wonZoneId }, "bottom");
-    }
-
-    // Der fertige Stich wandert in die Zone "letzter Stich". Offen liegt er
-    // dort nicht - der Host zeigt ihn nur, wenn jemand danach fragt, und die
-    // Animation sagt im Moment des Abräumens, wer ihn bekommen hat.
-    for (const trickCardId of played) {
-      cleared = moveCard(cleared, trickCardId, { kind: "zone", zoneId: lastTrickZoneId }, "bottom");
-    }
-
     const trickCount = readNumber(next, trickCountKey) + 1;
 
     next = appendLog(
       writeExtra(
         {
           ...next,
-          table: { ...cleared, activeIndex: winnerIndex },
-          lastTrickWinnerId: winnerId,
-          lastTrickSerial: (next.lastTrickSerial ?? 0) + 1
+          table: { ...next.table, activeIndex: winnerIndex }
         },
         {
           [tricksKey(winnerId)]: tricksOf(next, winnerId) + 1,
           [leadKey]: noLead,
-          [lastTrickWinnerKey]: winnerId,
           [trickLeaderKey]: winnerIndex,
           [trickCountKey]: trickCount
         }
@@ -509,11 +506,9 @@ export const trickBetRuleset: CardRuleset = {
       text.winsTrick as string
     );
 
-    if (trickCount >= readNumber(next, dealSizeKey, next.handSize)) {
-      return finishDeal(next, context);
-    }
-
-    return next;
+    // Abgeräumt wird nicht hier, sondern in tick() nach der Pause - erst soll
+    // der vollständige Stich zu sehen sein.
+    return beginTrickPause(next, context, winnerId);
   },
 
   drawCard(state) {
@@ -521,6 +516,11 @@ export const trickBetRuleset: CardRuleset = {
   },
 
   runAction(state, context, playerId, actionId) {
+    if (actionId === "last-trick") {
+      return (state.table.zones[lastTrickZoneId] ?? []).length === 0
+        ? state
+        : clearError(toggleLastTrick(state));
+    }
     const text = words(context);
 
     if (!actionId.startsWith("bid:")) {
@@ -569,11 +569,23 @@ export const trickBetRuleset: CardRuleset = {
   },
 
   controllerActions(state, context, playerId): CardTableActionState[] {
-    if (!isBidding(state) || state.gameOver || state.phase !== "playing") {
+    const text = words(context);
+
+    if (state.gameOver || state.phase !== "playing") {
       return [];
     }
 
-    const text = words(context);
+    const lastTrickAction: CardTableActionState = {
+      id: "last-trick",
+      label: text.lastTrick as string,
+      kind: "secondary",
+      enabled: (state.table.zones[lastTrickZoneId] ?? []).length > 0
+    };
+
+    if (!isBidding(state)) {
+      return [lastTrickAction];
+    }
+
     const enabled = isActive(state, playerId);
     const dealSize = readNumber(state, dealSizeKey, state.handSize);
 
@@ -641,7 +653,7 @@ export const trickBetRuleset: CardRuleset = {
     // Der zuletzt gewonnene Stich bleibt offen liegen, mit dem Namen dessen,
     // der ihn bekommen hat - sonst wäre nie zu sehen, was gerade passiert ist.
     if (lastCards.length > 0) {
-      const lastWinnerId = readText(state, lastTrickWinnerKey);
+      const lastWinnerId = trickWinnerId(state);
 
       stacks.push({
         id: lastTrickZoneId,
@@ -696,6 +708,18 @@ export const trickBetRuleset: CardRuleset = {
     }
 
     return `${tricksOf(state, playerId)}/${bid}`;
+  },
+
+  tick(state, context) {
+    const swept = sweepTrick(state, context, { trickZoneId, lastTrickZoneId, wonZoneId });
+
+    if (!swept) {
+      return state;
+    }
+
+    const dealSize = readNumber(swept, dealSizeKey, swept.handSize);
+
+    return readNumber(swept, trickCountKey) >= dealSize ? finishDeal(swept, context) : swept;
   },
 
   isFinished(state) {

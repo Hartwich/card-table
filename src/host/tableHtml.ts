@@ -114,13 +114,13 @@ function rulesHtml(state: CardTablePublicState, language: CardTableLanguage | un
 export function renderCardTableHtml(
   state: CardTablePublicState,
   language: CardTableLanguage | undefined,
-  options: { rulesOpen?: boolean; lastTrickOpen?: boolean } = {}
+  options: { rulesOpen?: boolean } = {}
 ): string {
   const text = cardTableLabels(language);
-  // Stapel, die nur auf Anforderung erscheinen, belegen den Tisch nicht -
-  // weder mit Karten noch mit Breite.
-  const onDemand = state.stacks.filter((stack) => stack.onDemand && stack.count > 0);
-  const stacks = options.lastTrickOpen
+  // Stapel, die nur auf Anforderung erscheinen, belegen den Tisch nicht - weder
+  // mit Karten noch mit Breite. Angefordert wird am Handy; der Tisch folgt dem
+  // Zustand und hat dafür keinen eigenen Knopf.
+  const stacks = state.revealOnDemand
     ? state.stacks.filter((stack) => stack.count > 0 || !stack.onDemand)
     : state.stacks.filter((stack) => !stack.onDemand);
   const cardWidth = cardWidthFor(stacks);
@@ -138,11 +138,6 @@ export function renderCardTableHtml(
         ${error}
         ${condition}
         <span class="ct-meta">${state.direction === 1 ? "→" : "←"}</span>
-        ${
-          onDemand.length > 0
-            ? `<button type="button" class="ct-rules-button${options.lastTrickOpen ? " is-on" : ""}" data-card-table-panel="last-trick">${escapeHtml(text.lastTrick)}</button>`
-            : ""
-        }
         <button type="button" class="ct-rules-button" data-card-table-panel="rules">${escapeHtml(text.rules)}</button>
       </div>
     </header>

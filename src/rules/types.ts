@@ -47,6 +47,12 @@ export interface CardGameState extends BaseRoundState {
   lastTrickWinnerId?: string;
   /** Zähler, der mit jedem abgeräumten Stich steigt. */
   lastTrickSerial?: number;
+  /**
+   * Jemand hat die Stapel "auf Anforderung" angefordert - etwa den letzten
+   * Stich. Gefragt wird vom Handy, gezeigt wird auf dem Tisch, also muss die
+   * Bitte durch den Zustand laufen.
+   */
+  showOnDemand?: boolean;
 }
 
 /**
@@ -75,6 +81,13 @@ export interface CardRulesetContext {
    * sie kennen muss - sie reicht nur durch. Lesen mit `readSetting`.
    */
   settings: Readonly<Record<string, unknown>>;
+  /**
+   * Der regelwerkseigene Ablageplatz der Vorrunde.
+   *
+   * Damit trägt ein Regelwerk etwas über die Runde hinaus, ohne dass die
+   * Runtime wissen muss, was - eine angekündigte Bockrunde zum Beispiel.
+   */
+  previousExtra: Readonly<Record<string, number | string | boolean | null>>;
 }
 
 export interface CardPlayCheck {
@@ -105,6 +118,13 @@ export interface CardRuleset {
   /** Erzwingt ein Deck und blendet die Deckauswahl des Hosts aus. */
   fixedDeckId?: string;
   /**
+   * Wählt das Deck abhängig von den eigenen Lobby-Optionen.
+   *
+   * Für Regelwerke, die zwischen mehreren festen Blättern umschalten - etwa
+   * Doppelkopf mit und ohne Neunen. Hat Vorrang vor `fixedDeckId`.
+   */
+  deckIdFor?(settings: Readonly<Record<string, unknown>>): string;
+  /**
    * Mindestbesetzung am Tisch, Menschen und KI zusammen.
    *
    * Fehlen Plätze, füllt der Kartentisch sie von selbst mit KI-Sitzen auf -
@@ -115,7 +135,13 @@ export interface CardRuleset {
   /** Schränkt die Deckauswahl ein, wenn mehrere Decks passen. */
   allowedDeckIds?: string[];
   /** Handkarten dieser Runde, z. B. steigend wie bei der Stichwette. */
-  handSizeFor?(input: { roundNumber: number; playerCount: number; configured: number }): number;
+  handSizeFor?(input: {
+    roundNumber: number;
+    playerCount: number;
+    configured: number;
+    /** Kartenzahl des gewählten Decks - für Spiele, die alles austeilen. */
+    deckCards: number;
+  }): number;
   /** Zusätzlicher Aufbau nach dem Austeilen, z. B. Trumpf oder offene Tischkarten. */
   setupRound?(state: CardGameState, context: CardRulesetContext): CardGameState;
   /** Eigene Tischstapel statt der generischen Zonen. */
@@ -189,6 +215,14 @@ export interface CardRuleset {
     context: CardRulesetContext,
     playerId: string
   ): string | undefined;
+  /**
+   * Zeitgesteuerter Schritt ohne Eingabe.
+   *
+   * Für alles, was von selbst passieren muss: den fertigen Stich nach einer
+   * Pause abräumen zum Beispiel. Gibt den unveränderten Zustand zurück, wenn
+   * gerade nichts fällig ist.
+   */
+  tick?(state: CardGameState, context: CardRulesetContext): CardGameState;
   isFinished(state: CardGameState): boolean;
   buildScore(state: CardGameState): ScoreEntry[];
   /**

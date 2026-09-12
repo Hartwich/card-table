@@ -43,7 +43,6 @@ export class CardTableHostScene extends Phaser.Scene {
   private signature = "";
   private latest: HostAppStateLike | null = null;
   private rulesOpen = false;
-  private lastTrickOpen = false;
   private ghosts: HTMLDivElement | null = null;
   private previous: CardTablePublicState | null = null;
   /** Gewinner des gerade abgeräumten Stichs, bis der Redraw ihn abgeholt hat. */
@@ -72,7 +71,6 @@ export class CardTableHostScene extends Phaser.Scene {
       this.pendingSweep = null;
       this.ghosts = null;
       this.rulesOpen = false;
-      this.lastTrickOpen = false;
       this.signature = "";
     });
   }
@@ -113,7 +111,6 @@ export class CardTableHostScene extends Phaser.Scene {
 
       if (panel) {
         this.rulesOpen = panel === "rules";
-        this.lastTrickOpen = panel === "last-trick" ? !this.lastTrickOpen : false;
         this.redraw();
         return;
       }
@@ -189,13 +186,8 @@ export class CardTableHostScene extends Phaser.Scene {
     if (sweptTrick) {
       this.pendingSweep = next.lastTrickWinnerId ?? null;
       // Sobald weitergespielt wird, verschwindet der letzte Stich wieder.
-      this.lastTrickOpen = false;
       playTrickSweep();
       return;
-    }
-
-    if (next.turnNumber !== previous.turnNumber) {
-      this.lastTrickOpen = false;
     }
 
     if (playedCardCount(next) > playedCardCount(previous)) {
@@ -282,16 +274,12 @@ export class CardTableHostScene extends Phaser.Scene {
     if (screen) {
       // Zwischen den Runden gibt es nichts nachzulesen.
       this.rulesOpen = false;
-      this.lastTrickOpen = false;
     }
 
     const html = screen
       ? screen
       : gameState && gameState.seats.length > 0
-        ? renderCardTableHtml(gameState, state.room?.language, {
-            rulesOpen: this.rulesOpen,
-            lastTrickOpen: this.lastTrickOpen
-          })
+        ? renderCardTableHtml(gameState, state.room?.language, { rulesOpen: this.rulesOpen })
         : `<p class="ct-wait">${cardTableLabels(state.room?.language).waiting}</p>`;
 
     if (html === this.signature) {

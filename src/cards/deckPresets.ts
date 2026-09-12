@@ -284,6 +284,24 @@ export const doppelkopf48Deck: DeckDefinition = {
   backStyle: "diamond"
 };
 
+const doppelkopf40RankIds = ["10", "jack", "queen", "king", "ace"];
+const doppelkopf40Ranks = frenchRanks.filter((rank) => doppelkopf40RankIds.includes(rank.id));
+
+/**
+ * Zehn bis Ass, jede Karte doppelt - das Blatt "ohne Neunen".
+ *
+ * Verbreitete Hausregel: Ohne die nullwertigen Neunen wird der Karo-König zum
+ * kleinsten Trumpf, und jeder Stich wiegt schwerer.
+ */
+export const doppelkopf40Deck: DeckDefinition = {
+  id: "doppelkopf-40",
+  label: "Doppelkopf ohne Neunen (40)",
+  suits: frenchSuits,
+  ranks: doppelkopf40Ranks,
+  cards: buildFullDeck(frenchSuits, doppelkopf40Ranks).map((card) => ({ ...card, copies: 2 })),
+  backStyle: "diamond"
+};
+
 export interface CardDeckOption {
   id: string;
   label: string;
@@ -310,7 +328,8 @@ export const allCardDecks: DeckDefinition[] = [
   trickBet60Deck,
   numbers80Deck,
   peter49Deck,
-  doppelkopf48Deck
+  doppelkopf48Deck,
+  doppelkopf40Deck
 ];
 
 export function resolveCardDeck(deckId: string | null | undefined): DeckDefinition {

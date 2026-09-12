@@ -151,6 +151,8 @@ export interface CardTablePublicState {
    */
   lastTrickWinnerId?: string;
   lastTrickSerial?: number;
+  /** Stapel mit `onDemand` gerade einblenden - angefordert von einem Handy. */
+  revealOnDemand?: boolean;
 }
 
 export interface CardTableControllerState extends CardTablePublicState {
@@ -197,6 +199,16 @@ export interface CardTableConfigureLobbyAction {
   botCount?: number;
   doppelkopfScoring?: string;
   handSort?: string;
+  dokoNines?: string;
+  dokoSecondDulle?: string;
+  dokoDoppelkopf?: string;
+  dokoFox?: string;
+  dokoCharlie?: string;
+  dokoFoxEnd?: string;
+  dokoPigs?: string;
+  dokoAgainstOld?: string;
+  dokoBock?: string;
+  dokoForced?: string;
 }
 
 export type CardTableHostAction = CardTableHostActionMessage | CardTableConfigureLobbyAction;

@@ -54,6 +54,11 @@ function resolveRuleset(context: ServerGameContext): CardRuleset {
 }
 
 function resolveDeck(context: ServerGameContext, ruleset: CardRuleset): DeckDefinition {
+  // Ein Regelwerk, das zwischen eigenen Blättern umschaltet, entscheidet selbst.
+  if (ruleset.deckIdFor) {
+    return resolveCardDeck(ruleset.deckIdFor(context.roomSettings));
+  }
+
   if (ruleset.fixedDeckId) {
     return resolveCardDeck(ruleset.fixedDeckId);
   }
@@ -73,7 +78,12 @@ function resolveCardStyle(context: ServerGameContext): CardTableCardStyle {
   return cardStyles.find((style) => style === configured) ?? "classic";
 }
 
-function resolveHandSize(context: ServerGameContext, ruleset: CardRuleset, seatCount: number): number {
+function resolveHandSize(
+  context: ServerGameContext,
+  ruleset: CardRuleset,
+  seatCount: number,
+  deck: DeckDefinition
+): number {
   const setting = readSetting(context, cardTableRoomSettingKeys.handSize);
   const configured = Math.max(
     minHandSize,
@@ -89,6 +99,7 @@ function resolveHandSize(context: ServerGameContext, ruleset: CardRuleset, seatC
     ruleset.handSizeFor({
       roundNumber: context.roundNumber,
       playerCount: Math.max(1, seatCount),
+      deckCards: countDeckCards(deck),
       configured
     })
   );
@@ -111,6 +122,13 @@ function resolveBotSeats(context: ServerGameContext, ruleset: CardRuleset): Card
   const missing = Math.max(0, (ruleset.minSeats ?? defaultMinSeats) - context.players.length);
 
   return createBotSeats(Math.max(0, Math.min(maxBotSeats, free, Math.max(requested, missing))));
+}
+
+/** Der regelwerkseigene Ablageplatz der Vorrunde, oder ein leerer. */
+function previousExtraOf(context: ServerGameContext): Readonly<Record<string, number | string | boolean | null>> {
+  const previous = context.previousRound?.state as Partial<CardGameState> | undefined;
+
+  return previous?.extra ?? {};
 }
 
 const scoredPhases = new Set(["locked", "result", "scoreboard", "finished"]);
@@ -176,7 +194,8 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
     now: context.now,
     playerNames,
     scores,
-    settings: context.roomSettings
+    settings: context.roomSettings,
+    previousExtra: previousExtraOf(context)
   };
 }
 
@@ -186,7 +205,7 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
   const bots = resolveBotSeats(context, ruleset);
   const botScores = carryBotScores(context, bots);
   const playerIds = [...context.players.map((player) => player.id), ...bots.map((bot) => bot.id)];
-  const handSize = resolveHandSize(context, ruleset, playerIds.length);
+  const handSize = resolveHandSize(context, ruleset, playerIds.length, deck);
   const table = createCardTable({
     deck,
     playerIds,
@@ -205,7 +224,8 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
       ...Object.fromEntries(context.players.map((player) => [player.id, player.score])),
       ...botScores
     },
-    settings: context.roomSettings
+    settings: context.roomSettings,
+    previousExtra: previousExtraOf(context)
   };
   const intro = ruleset.introMessage(rulesetContext);
   const initial: CardGameState = {
@@ -354,7 +374,8 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
     winnerName: state.winnerName,
     lastError: state.lastError,
     lastTrickWinnerId: state.lastTrickWinnerId,
-    lastTrickSerial: state.lastTrickSerial
+    lastTrickSerial: state.lastTrickSerial,
+    revealOnDemand: state.showOnDemand === true
   };
 }
 
@@ -406,7 +427,12 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
     }
 
     if (hostAction.type === "configure-lobby") {
-      if (state) {
+      // Einstellbar ist, solange keine Runde läuft. Nach der Spielauswahl legt
+      // die Plattform schon einen Zustand im Intro an - den zu prüfen hiesse,
+      // dass nach der Auswahl kein Regelwerk mehr gewechselt werden kann.
+      const roundRunning = Boolean(state) && state?.phase !== "round_intro" && state?.phase !== "finished";
+
+      if (roundRunning) {
         return {};
       }
 
@@ -507,8 +533,12 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
 
   tick(state, _deltaMs, context) {
     const ruleset = resolveCardRuleset(state.rulesetId);
+    const rulesetContext = buildRulesetContext(state, context);
+    // Erst das Regelwerk (abräumen, Fristen), dann die Bots - sonst würde ein
+    // Bot in eine Lage hineinspielen, die gerade noch aufgelöst wird.
+    const ticked = ruleset.tick?.(state, rulesetContext) ?? state;
 
-    return driveBots(state, ruleset, buildRulesetContext(state, context));
+    return driveBots(ticked, ruleset, rulesetContext);
   },
 
   isRoundFinished(state) {
