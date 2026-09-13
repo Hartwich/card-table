@@ -101,7 +101,7 @@ function classicBody(face: CardFace, ink: string, accent: string, width: number,
         const cy = height * (0.17 + py * 0.66);
         const flip = py > 0.55 ? ` transform="rotate(180 ${cx} ${cy})"` : "";
 
-        return `<text x="${cx}" y="${cy + width * 0.06}"${flip} font-family="${serifStack}" font-size="${width * 0.18}" fill="${ink}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>`;
+        return `<text x="${cx}" y="${cy + width * 0.06}"${flip} font-family="${serifStack}" font-size="${width * 0.22}" fill="${ink}" text-anchor="middle">${escapeXml(face.suitSymbol)}</text>`;
       })
       .join("");
 

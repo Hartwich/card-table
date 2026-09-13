@@ -196,6 +196,7 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
     deck: resolveCardDeck(state.deckId),
     language: context.language,
     now: context.now,
+    roundNumber: context.roundNumber,
     playerNames,
     playerColors,
     scores,
@@ -209,6 +210,11 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
   const deck = resolveDeck(context, ruleset);
   const bots = resolveBotSeats(context, ruleset);
   const botScores = carryBotScores(context, bots);
+  const previousCandidate = context.previousRound?.state as Partial<CardGameState> | undefined;
+  const previousState = previousCandidate?.rulesetId === ruleset.id ? previousCandidate : undefined;
+  const gameScores = previousState?.gameScores && typeof previousState.gameScores === "object"
+    ? { ...previousState.gameScores }
+    : {};
   const playerIds = [...context.players.map((player) => player.id), ...bots.map((bot) => bot.id)];
   const handSize = resolveHandSize(context, ruleset, playerIds.length, deck);
   const table = createCardTable({
@@ -257,6 +263,7 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     bots,
     botScores,
     botReadyAt: null,
+    gameScores,
     lastTrickSerial: 0
   };
 
@@ -331,6 +338,9 @@ function buildSeats(
   const players = new Map(context.players.map((player) => [player.id, player]));
   const bots = new Map(state.bots.map((bot) => [bot.id, bot]));
   const totals = botTotals(state);
+  const roundDeltas = state.gameOver
+    ? new Map(ruleset.buildScore(state).map((entry) => [entry.playerId, entry.delta]))
+    : new Map<string, number>();
   const activeId = state.table.turnOrder[state.table.activeIndex] ?? null;
 
   return state.table.turnOrder.map((playerId) => {
@@ -344,7 +354,9 @@ function buildSeats(
       // Ein Bot ist nie "abwesend" - er sitzt immer am Tisch.
       connected: bot ? true : player?.connected ?? false,
       handCount: handOf(state.table, playerId).length,
-      score: bot ? totals[playerId] ?? 0 : player?.score ?? 0,
+      // Der Kartentisch zeigt ausschließlich die Wertung dieser Runde.
+      score: state.gameScores[playerId] ?? 0,
+      scoreDelta: roundDeltas.get(playerId) ?? 0,
       isActive: playerId === activeId && !state.gameOver,
       isBot: Boolean(bot),
       statusLabel: ruleset.seatStatus(state, rulesetContext, playerId)
@@ -384,7 +396,10 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
     lastError: state.lastError,
     lastTrickWinnerId: state.lastTrickWinnerId,
     lastTrickSerial: state.lastTrickSerial,
-    revealOnDemand: state.showOnDemand === true
+    revealOnDemand: state.showOnDemand === true,
+    scoreBreakdown: typeof state.extra.scoreBreakdown === "string"
+      ? (() => { try { const parsed = JSON.parse(state.extra.scoreBreakdown as string); return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string") : undefined; } catch { return undefined; } })()
+      : undefined
   };
 }
 

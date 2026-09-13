@@ -40,6 +40,7 @@ function labels(language?: "de" | "en") {
     noWinner: en ? "No winner this round." : "Diese Runde ohne Sieger.",
     points: en ? "pts" : "Pkt.",
     bot: en ? "AI" : "KI"
+    , scoreDetails: en ? "Score details" : "Wertungsaufschlüsselung"
   };
 }
 
@@ -84,8 +85,8 @@ export function roundScreenHtml(state: RoundScreenStateLike): string | null {
           name: seat.name,
           color: seat.color,
           isBot: Boolean(seat.isBot),
-          total: totals.get(seat.playerId) ?? seat.score,
-          delta: deltas.get(seat.playerId) ?? 0
+          total: seat.score,
+          delta: seat.scoreDelta ?? deltas.get(seat.playerId) ?? 0
         }))
       : (state.scoreboard?.entries ?? []).map((entry) => ({
           playerId: entry.playerId,
@@ -116,10 +117,14 @@ export function roundScreenHtml(state: RoundScreenStateLike): string | null {
             </li>`;
           })
           .join("");
+  const breakdown = (gameState?.scoreBreakdown ?? []).length > 0
+    ? `<div class="ct-score-breakdown"><h2>${escapeHtml(text.scoreDetails)}</h2><ol>${gameState?.scoreBreakdown?.map((line, index) => `<li style="--ct-score-step:${index}">${escapeHtml(line)}</li>`).join("")}</ol></div>`
+    : "";
 
   return `<section class="ct-screen">
     <h1>${text.result}</h1>
     <p class="ct-screen-lead">${winnerLine}</p>
     <ol class="ct-score">${rows}</ol>
+    ${breakdown}
   </section>`;
 }

@@ -64,6 +64,8 @@ const reserveKey = (playerId: string): string => `reserve:${playerId}`;
 const announceKey = (playerId: string): string => `say:${playerId}`;
 const revealKey = (playerId: string): string => `reveal:${playerId}`;
 const queensShownKey = "queensShown";
+const weddingChoiceKey = "weddingChoice";
+const scoreBreakdownKey = "scoreBreakdown";
 
 const noLead = "";
 const trumpLead = "*";
@@ -189,6 +191,9 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     askReserve: "Vorbehalt?",
     normalGame: "Normalspiel",
     weddingGame: "Hochzeit",
+    weddingTrump: "Hochzeit: ersten Trumpfstich wählen",
+    weddingSuit: "Hochzeit: ersten Fehlstich wählen",
+    chooseWedding: "Wähle den Klärungsstich",
     partnerFound: "ist der gesuchte Partner",
     weddingAlone: "Hochzeit ohne Partner - der Spieler spielt solo.",
     re: "Re",
@@ -244,6 +249,9 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     askReserve: "Reservation?",
     normalGame: "Normal game",
     weddingGame: "Wedding",
+    weddingTrump: "Wedding: choose first trump trick",
+    weddingSuit: "Wedding: choose first plain-suit trick",
+    chooseWedding: "Choose the clarification trick",
     partnerFound: "is the partner",
     weddingAlone: "Wedding without a partner - played as a solo.",
     re: "Re",
@@ -409,7 +417,7 @@ function phaseOf(state: CardGameState): string {
 }
 
 function isReservePhase(state: CardGameState): boolean {
-  return phaseOf(state) === "reserve";
+  return phaseOf(state) === "reserve" || phaseOf(state) === "wedding-choice";
 }
 
 function isActive(state: CardGameState, playerId: string): boolean {
@@ -589,6 +597,7 @@ interface DealResult {
   value: number;
   reEyes: number;
   kontraEyes: number;
+  breakdown: string[];
 }
 
 /**
@@ -619,6 +628,7 @@ function settleDeal(state: CardGameState): DealResult {
 
   // Nullsolo zählt nicht nach Augen: Der Alleinspieler darf keinen einzigen
   // Stich bekommen. Ein Stich mit null Augen ist also schon verloren.
+  const breakdown: string[] = [];
   if (gameKind(state) === "solo-null") {
     const soloist = readText(state, soloistKey);
     reWon = soloist ? readNumber(state, tricksKey(soloist)) === 0 : false;
@@ -632,47 +642,51 @@ function settleDeal(state: CardGameState): DealResult {
 
   if (gameKind(state) === "solo-null") {
     // Alles oder nichts, ohne Schwellen und ohne Absagen.
-    return { reWon, value: 3, reEyes, kontraEyes };
+    breakdown.push("Nullsolo: 3 Punkte Grundwert");
+    return { reWon, value: 3, reEyes, kontraEyes, breakdown };
   }
 
   const loserEyes = reWon ? kontraEyes : reEyes;
   let value = 1;
+  breakdown.push("Gewonnen: 1 Punkt Grundwert");
 
   for (const threshold of [90, 60, 30]) {
     if (loserEyes < threshold) {
       value += 1;
+      breakdown.push(`Gegenseite unter ${threshold}: +1 Punkt`);
     }
   }
 
   if (loserEyes === 0) {
     value += 1;
+    breakdown.push("Gegenseite schwarz: +1 Punkt");
   }
 
   // Gehaltene Absagen zählen zusätzlich.
   const winnerSaid = reWon ? reSaid : kontraSaid;
   value += Math.max(0, winnerSaid - 1);
+  if (winnerSaid >= 2) breakdown.push(`Eigene Absagen: +${winnerSaid - 1} Punkt(e)`);
 
   // Sonderpunkte des Normalspiels.
   if (gameKind(state) === "normal" && !reWon && optionOn(state, "againstOld")) {
     value += 1; // gegen die Alten gewonnen
+    breakdown.push("Gegen die Alten: +1 Punkt");
   }
 
   value += readNumber(state, "bonus:re") * (reWon ? 1 : 0);
   value += readNumber(state, "bonus:kontra") * (reWon ? 0 : 1);
+  const special = readNumber(state, reWon ? "bonus:re" : "bonus:kontra");
+  if (special > 0) breakdown.push(`Sonderpunkte: +${special}`);
 
-  if (reSaid >= 1) {
-    value *= 2;
-  }
-
-  if (kontraSaid >= 1) {
-    value *= 2;
-  }
+  if (reSaid >= 1) { value += 2; breakdown.push("Re angesagt: +2 Punkte"); }
+  if (kontraSaid >= 1) { value += 2; breakdown.push("Kontra angesagt: +2 Punkte"); }
 
   if (state.extra[bockActiveKey] === true) {
     value *= 2;
+    breakdown.push("Bockrunde: Wert verdoppelt");
   }
 
-  return { reWon, value, reEyes, kontraEyes };
+  return { reWon, value, reEyes, kontraEyes, breakdown };
 }
 
 function finishDeal(state: CardGameState, context: CardRulesetContext): CardGameState {
@@ -706,7 +720,8 @@ function finishDeal(state: CardGameState, context: CardRulesetContext): CardGame
     ? `${result.reWon ? text.soloWins : text.soloLost} (${soloist ? playerName(context, soloist) : "?"}, ${result.reEyes} ${text.eyes})`
     : `${result.reWon ? text.reWins : text.kontraWins} ${result.reWon ? result.reEyes : result.kontraEyes} ${text.eyes}`;
 
-  return finishGame(next, null, null, message);
+  next = writeExtra(next, { [scoreBreakdownKey]: JSON.stringify(result.breakdown) });
+  return finishGame(next, null, null, `${message} · ${result.value} Punkte`);
 }
 
 // ---------------------------------------------------------------------------
@@ -766,7 +781,7 @@ function resolveReservations(state: CardGameState, context: CardRulesetContext):
     {
       [phaseKey]: "play",
       [leadKey]: noLead,
-      [trickLeaderKey]: 0,
+      [trickLeaderKey]: Math.max(0, ((context.roundNumber ?? 1) - 1) % state.table.turnOrder.length),
       [halfKey]: Math.floor(dealtPoints / 2)
     }
   );
@@ -788,7 +803,8 @@ function resolveReservations(state: CardGameState, context: CardRulesetContext):
   const announced = writeExtra(base, {
     [kindKey]: best.reservation.kind,
     [soloistKey]: best.playerId,
-    [soloSuitKey]: best.reservation.suitId ?? "diamonds"
+    [soloSuitKey]: best.reservation.suitId ?? "diamonds",
+    [phaseKey]: best.reservation.kind === "wedding" ? "wedding-choice" : "play"
   });
 
   return appendLog(
@@ -818,7 +834,11 @@ function resolveWedding(
   const soloist = readText(state, soloistKey);
   const trickNumber = readNumber(state, trickCountKey) + 1;
 
-  if (winnerId !== soloist) {
+  const choice = readText(state, weddingChoiceKey);
+  const lead = leadKind(state);
+  const qualifies = choice === "trump" ? lead === trumpLead : choice === "suit" ? lead !== trumpLead : true;
+
+  if (winnerId !== soloist && qualifies) {
     return appendLog(
       writeExtra(state, { [partnerKey]: winnerId }),
       playerName(context, winnerId),
@@ -944,6 +964,7 @@ export const doppelkopfRuleset: CardRuleset = {
       [soloistKey]: null,
       [soloSuitKey]: "diamonds",
       [partnerKey]: null,
+      [weddingChoiceKey]: null,
       "bonus:re": 0,
       "bonus:kontra": 0,
       [queensShownKey]: 0
@@ -989,7 +1010,7 @@ export const doppelkopfRuleset: CardRuleset = {
       ...state,
       table: {
         ...state.table,
-        activeIndex: 0,
+        activeIndex: Math.max(0, ((context.roundNumber ?? 1) - 1) % state.table.turnOrder.length),
         zones: { ...state.table.zones, [trickZoneId]: [], [lastTrickZoneId]: [], [wonZoneId]: [] }
       },
       extra: { ...state.extra, ...counters }
@@ -1018,7 +1039,7 @@ export const doppelkopfRuleset: CardRuleset = {
             lines: [
               "Before the first card, everyone declares in turn: healthy, wedding or a solo.",
               "A solo beats a wedding, a wedding beats the normal game.",
-              "A wedding needs both club queens; the first trick another player takes decides the partner.",
+              "A wedding needs both club queens; choose whether the first foreign trump or plain-suit trick decides the partner.",
               "Solos: one suit, queens, jacks, kings, aces, tens, nines, or no trump at all."
             ]
           },
@@ -1063,7 +1084,7 @@ export const doppelkopfRuleset: CardRuleset = {
             lines: [
               "Vor der ersten Karte sagt jeder reihum: gesund, Hochzeit oder ein Solo.",
               "Ein Solo schlägt die Hochzeit, die Hochzeit das Normalspiel.",
-              "Die Hochzeit braucht beide Kreuz-Damen; der erste Stich, den ein anderer holt, bestimmt den Partner.",
+              "Die Hochzeit braucht beide Kreuz-Damen; wähle, ob der erste fremde Trumpf- oder Fehlstich den Partner bestimmt.",
               "Soli: eine Farbe, Damen, Buben, Könige, Asse, Zehnen, Neunen - oder gar kein Trumpf."
             ]
           },
@@ -1103,7 +1124,11 @@ export const doppelkopfRuleset: CardRuleset = {
       return { allowed: false, hint: text.notInHand as string };
     }
 
-    if (isReservePhase(state)) {
+    if (phaseOf(state) === "wedding-choice") {
+      return { allowed: false, hint: text.chooseWedding as string };
+    }
+
+    if (phaseOf(state) === "reserve") {
       return { allowed: false, hint: text.reserveFirst as string };
     }
 
@@ -1252,7 +1277,7 @@ export const doppelkopfRuleset: CardRuleset = {
 
     // Abgeräumt wird nicht hier, sondern in tick() nach der Pause - erst soll
     // der vollständige Stich zu sehen sein.
-    return beginTrickPause(next, context, winnerId);
+    return beginTrickPause(next, context, winnerId, lastTrick);
   },
 
   drawCard(state) {
@@ -1260,6 +1285,12 @@ export const doppelkopfRuleset: CardRuleset = {
   },
 
   runAction(state, context, playerId, actionId) {
+    if (phaseOf(state) === "wedding-choice") {
+      const soloist = readText(state, soloistKey);
+      if (playerId !== soloist || (actionId !== "wedding:trump" && actionId !== "wedding:suit")) return state;
+      return clearError(writeExtra(state, { [phaseKey]: "play", [weddingChoiceKey]: actionId.endsWith("trump") ? "trump" : "suit" }));
+    }
+
     if (actionId === "last-trick") {
       return (state.table.zones[lastTrickZoneId] ?? []).length === 0
         ? state
@@ -1309,7 +1340,7 @@ export const doppelkopfRuleset: CardRuleset = {
 
     // --- Ansagen und Absagen ---
     if (actionId.startsWith("say:")) {
-      if (isReservePhase(state)) {
+      if (phaseOf(state) === "reserve") {
         return withError(state, text.reserveFirst as string);
       }
 
@@ -1351,7 +1382,16 @@ export const doppelkopfRuleset: CardRuleset = {
 
     const text = words(context);
 
-    if (isReservePhase(state)) {
+    if (phaseOf(state) === "wedding-choice") {
+      return readText(state, soloistKey) === playerId
+        ? [
+            { id: "wedding:trump", label: text.weddingTrump as string, kind: "primary", enabled: true },
+            { id: "wedding:suit", label: text.weddingSuit as string, kind: "secondary", enabled: true }
+          ]
+        : [];
+    }
+
+    if (phaseOf(state) === "reserve") {
       const active = isActive(state, playerId);
 
       return reservations
@@ -1461,7 +1501,11 @@ export const doppelkopfRuleset: CardRuleset = {
   condition(state, context) {
     const text = words(context);
 
-    if (isReservePhase(state)) {
+    if (phaseOf(state) === "wedding-choice") {
+      return { label: text.chooseWedding as string, symbol: "?", color: "neutral" };
+    }
+
+    if (phaseOf(state) === "reserve") {
       return { label: text.askReserve as string, symbol: "?", color: "neutral" };
     }
 
@@ -1597,6 +1641,11 @@ export const doppelkopfRuleset: CardRuleset = {
    * sticht er nur fette Stiche, und dann so billig wie möglich.
    */
   botMove(state, context, playerId) {
+    if (phaseOf(state) === "wedding-choice") {
+      return readText(state, soloistKey) === playerId
+        ? { kind: "action", actionId: "wedding:suit" }
+        : { kind: "wait" };
+    }
     if (isTrickPending(state)) {
       return { kind: "wait" };
     }

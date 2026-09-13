@@ -43,6 +43,8 @@ export interface CardGameState extends BaseRoundState {
   botScores: Record<string, number>;
   /** Zeitpunkt, an dem der nächste KI-Zug fällig ist. */
   botReadyAt: number | null;
+  /** Kumulierte Punkte der laufenden Kartenspielserie (pro Regelwerk). */
+  gameScores: Record<string, number>;
   /** Wer den zuletzt abgeräumten Stich bekommen hat. */
   lastTrickWinnerId?: string;
   /** Zähler, der mit jedem abgeräumten Stich steigt. */
@@ -72,6 +74,7 @@ export interface CardRulesetContext {
   deck: DeckDefinition;
   language: SupportedLanguage;
   now: number;
+  roundNumber?: number;
   playerNames: Record<string, string>;
   /** Sitzfarben - für die Umrandung gelegter Karten. */
   playerColors: Record<string, string>;

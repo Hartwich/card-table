@@ -34,6 +34,7 @@ export const cardTableManifest = {
   supportsTeams: false,
   estimatedRoundDurationMs: 600_000,
   roundCompletionMode: "wait_for_ready",
+  scoreScope: "game",
   lobbySetup: {
     title: "Kartentisch Setup",
     description: "Regelwerk, Deck und Handkarten wählen.",

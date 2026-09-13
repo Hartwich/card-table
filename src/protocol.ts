@@ -84,6 +84,7 @@ export interface CardTableSeatState {
   connected: boolean;
   handCount: number;
   score: number;
+  scoreDelta?: number;
   isActive: boolean;
   /** Virtueller Mitspieler statt eines Handys. */
   isBot?: boolean;
@@ -167,6 +168,7 @@ export interface CardTablePublicState {
   lastTrickSerial?: number;
   /** Stapel mit `onDemand` gerade einblenden - angefordert von einem Handy. */
   revealOnDemand?: boolean;
+  scoreBreakdown?: string[];
 }
 
 export interface CardTableControllerState extends CardTablePublicState {

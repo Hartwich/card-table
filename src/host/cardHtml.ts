@@ -85,7 +85,7 @@ export function stackHtml(
     // nach dem aktuellen Inhalt - sonst schrumpften die Karten in dem Moment,
     // in dem die letzte in den Stich fällt.
     const slots = Math.max(stack.capacity ?? stack.cards.length, stack.cards.length, 1);
-    const scale = Math.min(1, Math.max(0.62, 3 / slots));
+    const scale = Math.min(1, Math.max(0.68, 3.6 / slots));
     const width = Math.round(cardWidth * scale);
     const inner =
       stack.cards.length === 0

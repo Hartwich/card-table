@@ -128,7 +128,9 @@ export function renderCardTableHtml(
   const stacks = state.revealOnDemand
     ? state.stacks.filter((stack) => stack.count > 0 || !stack.onDemand)
     : state.stacks.filter((stack) => !stack.onDemand);
-  const cardWidth = cardWidthFor(stacks);
+  const cardWidth = state.rulesetId === "doppelkopf"
+    ? Math.min(220, cardWidthFor(stacks) + 34)
+    : cardWidthFor(stacks);
   const condition = state.conditionLabel
     ? `<span class="ct-chip">${escapeHtml(`${state.conditionSymbol ?? ""} ${state.conditionLabel}`.trim())}</span>`
     : "";
@@ -205,7 +207,7 @@ export const cardTableStyles = `
 .ct-stack-cards.is-pile{position:relative}
 .ct-stack-cards.is-pile .ct-layer{position:absolute;left:0;top:0}
 .ct-fan,.ct-layer{display:block;position:relative;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35))}
-.ct-fan[data-owner]{border-radius:12px;box-shadow:0 0 0 3px var(--ct-owner),0 0 0 5px rgba(0,0,0,.25)}
+.ct-fan[data-owner]{border-radius:12px;box-shadow:0 0 0 5px var(--ct-owner),0 0 0 7px rgba(0,0,0,.32)}
 .ct-fan[data-top]{filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
 .ct-slot{display:block;border-radius:10px;border:2px dashed rgba(247,241,231,.35);background:rgba(255,255,255,.06)}
 .ct-stack-label{display:inline-flex;gap:8px;align-items:baseline;color:#f3ece0;font-size:1rem;
@@ -249,5 +251,10 @@ export const cardTableStyles = `
 .ct-score-total{font-family:var(--ct-display)}
 .ct-score-total em{font-style:normal;color:var(--ct-success);margin-left:6px}
 .ct-score-empty{justify-items:center;color:var(--ct-muted)}
+.ct-score-breakdown{margin-top:18px;padding:12px 16px;border:1px solid var(--ct-line);border-radius:12px;text-align:left;background:color-mix(in srgb,var(--ct-surface) 72%,transparent)}
+.ct-score-breakdown h2{margin:0 0 8px;font:500 1rem var(--ct-display);color:var(--ct-accent)}
+.ct-score-breakdown ol{margin:0;padding-left:22px;display:grid;gap:4px;color:var(--ct-muted);font-size:.9rem}
+.ct-score-breakdown li{animation:ct-score-step .32s ease both;animation-delay:calc(var(--ct-score-step, 0) * 70ms)}
+@keyframes ct-score-step{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .ct-wait{font-size:1.4rem;color:var(--ct-muted)}
 `;

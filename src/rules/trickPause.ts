@@ -23,7 +23,8 @@ import {
  */
 
 /** Wie lange der fertige Stich offen liegen bleibt. */
-export const trickPauseMs = 5_000;
+export const trickPauseMs = 7_000;
+export const lastTrickPauseMs = 12_000;
 
 const sweepAtKey = "sweepAt";
 const winnerKey = "lastTrickWinner";
@@ -53,10 +54,11 @@ export function trickWinnerId(state: CardGameState): string | null {
 export function beginTrickPause(
   state: CardGameState,
   context: CardRulesetContext,
-  winnerId: string
+  winnerId: string,
+  lastTrick = false
 ): CardGameState {
   return writeExtra(state, {
-    [sweepAtKey]: context.now + trickPauseMs,
+    [sweepAtKey]: context.now + (lastTrick ? lastTrickPauseMs : trickPauseMs),
     [winnerKey]: winnerId
   });
 }

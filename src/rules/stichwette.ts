@@ -509,7 +509,7 @@ export const trickBetRuleset: CardRuleset = {
 
     // Abgeräumt wird nicht hier, sondern in tick() nach der Pause - erst soll
     // der vollständige Stich zu sehen sein.
-    return beginTrickPause(next, context, winnerId);
+    return beginTrickPause(next, context, winnerId, handsEmpty(next));
   },
 
   drawCard(state) {

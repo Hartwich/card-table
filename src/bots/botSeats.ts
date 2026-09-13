@@ -24,7 +24,7 @@ export function isBotId(playerId: string): boolean {
 
 const botNames = ["Ada", "Bruno", "Cleo", "Darius", "Elin"] as const;
 
-const botColors = ["#8d5f4a", "#6f8f6a", "#b5763f", "#5f7d8d", "#8a6d9a"] as const;
+const botColors = ["#8d5f4a", "#eab308", "#b5763f", "#5f7d8d", "#8a6d9a"] as const;
 
 /**
  * Baut die KI-Sitze einer Runde. Reihenfolge, Namen und Farben sind stabil.
