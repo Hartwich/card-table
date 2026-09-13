@@ -44,6 +44,7 @@
     "docs"
   ],
   "scripts": {
+    "test": "npm run build && node --test tests/*.test.mjs",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "npm run typecheck",

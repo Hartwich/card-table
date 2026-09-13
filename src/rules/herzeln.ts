@@ -436,7 +436,7 @@ export const herzelnRuleset: CardRuleset = {
         {
           [penaltyKey(winnerId)]: penaltyPoints(next, winnerId) + penalty,
           [leadKey]: noLead,
-          [trickLeaderKey]: winnerIndex,
+          // Der sichtbare Stich behält seinen Anspieler bis zur ersten Karte des nächsten Stichs.
           [trickCountKey]: trickCount
         }
       ),

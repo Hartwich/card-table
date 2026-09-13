@@ -1242,7 +1242,7 @@ export const doppelkopfRuleset: CardRuleset = {
           [pointsKey(winnerId)]: pointsOf(next, winnerId) + eyes,
           [tricksKey(winnerId)]: readNumber(next, tricksKey(winnerId)) + 1,
           [leadKey]: noLead,
-          [trickLeaderKey]: winnerIndex,
+          // Der sichtbare Stich behält seinen Anspieler bis zur ersten Karte des nächsten Stichs.
           [trickCountKey]: trickCount
         }
       ),

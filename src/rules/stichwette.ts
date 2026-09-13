@@ -499,7 +499,7 @@ export const trickBetRuleset: CardRuleset = {
         {
           [tricksKey(winnerId)]: tricksOf(next, winnerId) + 1,
           [leadKey]: noLead,
-          [trickLeaderKey]: winnerIndex,
+          // Der sichtbare Stich behält seinen Anspieler bis zur ersten Karte des nächsten Stichs.
           [trickCountKey]: trickCount
         }
       ),
