@@ -240,7 +240,7 @@ function showdown(
     players.map((playerId) => [playerId, schwimmenHandValue(state, context, handOf(state.table, playerId))])
   );
   const losers = firePlayerId
-    ? players.filter((playerId) => playerId !== firePlayerId)
+    ? players.filter((playerId) => (values.get(playerId) ?? 0) < fireValue)
     : (() => {
         const lowest = Math.min(...players.map((playerId) => values.get(playerId) ?? 0));
         return players.filter((playerId) => (values.get(playerId) ?? 0) === lowest);
@@ -359,7 +359,7 @@ export const schwimmenRuleset: CardRuleset = {
               "Ace 11, king / queen / jack / ten 10, every other card its number.",
               "Only cards of the same suit add up — two suits never combine.",
               "Three cards of the same rank count 30.5.",
-              "31 is the maximum and is called fire."
+              "31 is the maximum and is called fire. Three aces also count 30.5 in this variant."
             ]
           },
           {
@@ -375,6 +375,7 @@ export const schwimmenRuleset: CardRuleset = {
             title: "Pushing and knocking",
             lines: [
               "If everyone pushes in a row, the three table cards are replaced from the pile.",
+              "If fewer than three cards remain in the pile, hands are compared immediately.",
               "After a knock every other player has exactly one more turn, then all hands are revealed.",
               "The player who knocked does not get another turn."
             ]
@@ -386,7 +387,7 @@ export const schwimmenRuleset: CardRuleset = {
               "The lowest hand loses one. If several tie for lowest, they all lose one.",
               "If everybody ties, nobody loses a life.",
               "At zero lives you are swimming — the next loss puts you out.",
-              "Reaching 31 ends the round at once and every other player loses a life."
+              "31 ends the deal immediately, including when dealt. Everyone below 31 loses a life."
             ]
           },
           {
@@ -411,7 +412,7 @@ export const schwimmenRuleset: CardRuleset = {
               "Ass 11, König / Dame / Bube / Zehn 10, alle anderen Karten ihren Zahlenwert.",
               "Nur Karten derselben Farbe zählen zusammen — zwei Farben werden nie addiert.",
               "Drei Karten desselben Werts zählen 30,5.",
-              "31 ist das Maximum und heißt Feuer."
+              "31 ist das Maximum und heißt Feuer. Drei Asse zählen in dieser Variante ebenfalls 30,5."
             ]
           },
           {
@@ -427,6 +428,7 @@ export const schwimmenRuleset: CardRuleset = {
             title: "Schieben und Klopfen",
             lines: [
               "Schieben alle reihum, werden die drei Tischkarten durch drei neue vom Stapel ersetzt.",
+              "Sind weniger als drei Karten im Stapel übrig, wird sofort verglichen.",
               "Nach dem Klopfen hat jeder andere noch genau einen Zug, dann wird aufgedeckt.",
               "Wer geklopft hat, kommt nicht noch einmal dran."
             ]
@@ -438,7 +440,7 @@ export const schwimmenRuleset: CardRuleset = {
               "Die niedrigste Hand verliert eins. Sind mehrere gleich niedrig, verlieren alle davon eins.",
               "Sind alle gleichauf, verliert niemand.",
               "Bei null Leben schwimmst du — beim nächsten Verlust bist du raus.",
-              "Wer 31 erreicht, beendet die Runde sofort; alle anderen verlieren ein Leben."
+              "31 beendet die Teilrunde sofort, auch direkt nach dem Austeilen. Alle unter 31 verlieren ein Leben."
             ]
           },
           {
@@ -476,6 +478,9 @@ export const schwimmenRuleset: CardRuleset = {
     if (!check.allowed) {
       return withError(state, check.hint ?? (text.notYourTurn as string));
     }
+
+    const fire = dealtFire(state, context);
+    if (fire) return showdown(state, context, fire);
 
     if (!choiceId || !tableCardIds(state).includes(choiceId)) {
       return withError(state, text.needTableCard as string);
@@ -518,6 +523,9 @@ export const schwimmenRuleset: CardRuleset = {
     if (!isActive(state, playerId)) {
       return withError(state, text.notYourTurn as string);
     }
+
+    const fire = dealtFire(state, context);
+    if (fire) return showdown(state, context, fire);
 
     if (actionId === "swap-all") {
       const hand = [...handOf(state.table, playerId)];
@@ -647,6 +655,7 @@ export const schwimmenRuleset: CardRuleset = {
         id: tableZoneId,
         label: context.language === "en" ? "Table cards" : "Tischkarten",
         kind: "zone",
+        layout: "spread",
         count: cards.length,
         cards,
         faceDown: false
@@ -699,6 +708,12 @@ export const schwimmenRuleset: CardRuleset = {
 
   isFinished(state) {
     return state.gameOver;
+  },
+
+  tick(state, context) {
+    if (state.gameOver) return state;
+    const fire = dealtFire(state, context);
+    return fire ? showdown(state, context, fire) : state;
   },
 
   buildScore(state): ScoreEntry[] {
@@ -761,6 +776,13 @@ export const schwimmenRuleset: CardRuleset = {
 
 /** Ab diesem Handwert klopft ein Bot, statt weiter zu schieben. */
 const knockThreshold = 27;
+
+/** Also resolve a fire hand dealt to a player who is not yet on turn. */
+function dealtFire(state: CardGameState, context: CardRulesetContext): string | undefined {
+  return activePlayers(state).find((playerId) =>
+    schwimmenHandValue(state, context, handOf(state.table, playerId)) >= fireValue
+  );
+}
 
 /**
  * Schließt einen Zug ab: prüft Feuer, beendet nach dem Klopfen die Runde und

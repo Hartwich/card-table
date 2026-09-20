@@ -21,6 +21,7 @@ type SupportedLanguage = "de" | "en";
 interface HostClientLike {
   subscribe(callback: (state: HostAppStateLike) => void): () => void;
   sendGameHostAction?(gameId: string, action: unknown): void;
+  returnToGameSelection?(): void;
 }
 
 interface HostAppStateLike extends RoundScreenStateLike {
@@ -107,6 +108,10 @@ export class CardTableHostScene extends Phaser.Scene {
       resumeTableAudio();
 
       const element = event.target as HTMLElement | null;
+      if (element?.closest('[data-card-table-menu]')) {
+        this.client?.returnToGameSelection?.();
+        return;
+      }
       const panel = element?.closest("[data-card-table-panel]")?.getAttribute("data-card-table-panel");
 
       if (panel) {

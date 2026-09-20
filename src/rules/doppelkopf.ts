@@ -191,8 +191,9 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     askReserve: "Vorbehalt?",
     normalGame: "Normalspiel",
     weddingGame: "Hochzeit",
-    weddingTrump: "Hochzeit: ersten Trumpfstich wählen",
-    weddingSuit: "Hochzeit: ersten Fehlstich wählen",
+    weddingSilent: "Stille Hochzeit",
+    weddingTrump: "Hochzeit: erster Trumpf geht mit",
+    weddingSuit: "Hochzeit: erster Fehl geht mit",
     chooseWedding: "Wähle den Klärungsstich",
     partnerFound: "ist der gesuchte Partner",
     weddingAlone: "Hochzeit ohne Partner - der Spieler spielt solo.",
@@ -249,6 +250,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     askReserve: "Reservation?",
     normalGame: "Normal game",
     weddingGame: "Wedding",
+    weddingSilent: "Silent wedding",
     weddingTrump: "Wedding: choose first trump trick",
     weddingSuit: "Wedding: choose first plain-suit trick",
     chooseWedding: "Choose the clarification trick",
@@ -804,7 +806,7 @@ function resolveReservations(state: CardGameState, context: CardRulesetContext):
     [kindKey]: best.reservation.kind,
     [soloistKey]: best.playerId,
     [soloSuitKey]: best.reservation.suitId ?? "diamonds",
-    [phaseKey]: best.reservation.kind === "wedding" ? "wedding-choice" : "play"
+    [phaseKey]: best.reservation.kind === "wedding" && !readText(base, weddingChoiceKey) ? "wedding-choice" : "play"
   });
 
   return appendLog(
@@ -1039,7 +1041,7 @@ export const doppelkopfRuleset: CardRuleset = {
             lines: [
               "Before the first card, everyone declares in turn: healthy, wedding or a solo.",
               "A solo beats a wedding, a wedding beats the normal game.",
-              "A wedding needs both club queens; choose whether the first foreign trump or plain-suit trick decides the partner.",
+              "With both club queens, choose a silent wedding (secretly alone), first plain-suit trick or first trump trick during reservations.",
               "Solos: one suit, queens, jacks, kings, aces, tens, nines, or no trump at all."
             ]
           },
@@ -1084,7 +1086,7 @@ export const doppelkopfRuleset: CardRuleset = {
             lines: [
               "Vor der ersten Karte sagt jeder reihum: gesund, Hochzeit oder ein Solo.",
               "Ein Solo schlägt die Hochzeit, die Hochzeit das Normalspiel.",
-              "Die Hochzeit braucht beide Kreuz-Damen; wähle, ob der erste fremde Trumpf- oder Fehlstich den Partner bestimmt.",
+              "Mit beiden Kreuz-Damen wählst du beim Vorbehalt: stille Hochzeit (verdeckt allein), erster Fehl oder erster Trumpf geht mit.",
               "Soli: eine Farbe, Damen, Buben, Könige, Asse, Zehnen, Neunen - oder gar kein Trumpf."
             ]
           },
@@ -1298,6 +1300,18 @@ export const doppelkopfRuleset: CardRuleset = {
     }
     const text = words(context);
 
+    // A silent wedding is publicly healthy; the hand still determines Re.
+    if (actionId.startsWith("reserve:wedding-")) {
+      const choice = actionId.slice("reserve:wedding-".length);
+      if (!["silent", "suit", "trump"].includes(choice) || phaseOf(state) !== "reserve" || !isActive(state, playerId) || !hasWedding(state, playerId)) {
+        return state;
+      }
+      if (choice !== "silent") {
+        state = writeExtra(state, { [weddingChoiceKey]: choice });
+      }
+      actionId = choice === "silent" ? "reserve:healthy" : "reserve:wedding";
+    }
+
     // --- Vorbehalt ---
     if (actionId.startsWith("reserve:")) {
       if (!isReservePhase(state)) {
@@ -1394,14 +1408,21 @@ export const doppelkopfRuleset: CardRuleset = {
     if (phaseOf(state) === "reserve") {
       const active = isActive(state, playerId);
 
-      return reservations
-        .filter((reservation) => reservation.kind !== "wedding" || hasWedding(state, playerId))
+      const weddingActions: CardTableActionState[] = hasWedding(state, playerId)
+        ? [
+            { id: "reserve:wedding-silent", label: text.weddingSilent as string, kind: "secondary", enabled: active },
+            { id: "reserve:wedding-suit", label: text.weddingSuit as string, kind: "secondary", enabled: active },
+            { id: "reserve:wedding-trump", label: text.weddingTrump as string, kind: "secondary", enabled: active }
+          ]
+        : [];
+      return [...weddingActions, ...reservations
+        .filter((reservation) => reservation.kind !== "wedding")
         .map((reservation) => ({
           id: `reserve:${reservation.id}`,
           label: reservationLabel(reservation, context),
           kind: reservation.kind === "normal" ? ("primary" as const) : ("secondary" as const),
           enabled: active
-        }));
+        }))];
     }
 
     const lastTrickAction: CardTableActionState = {

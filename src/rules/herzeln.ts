@@ -66,6 +66,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     mustFollow: "Du musst Farbe bedienen.",
     heartsClosed: "Herz ist noch nicht gebrochen.",
     mustOpen: "Die Runde beginnt mit der Kreuz-Zwei.",
+    firstTrick: "Im ersten Stich keine Strafkarte abwerfen, solange du eine andere Karte hast.",
     plays: "legt",
     takesTrick: "nimmt den Stich",
     points: "Punkte",
@@ -87,6 +88,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     mustFollow: "You have to follow suit.",
     heartsClosed: "Hearts have not been broken yet.",
     mustOpen: "The round starts with the two of clubs.",
+    firstTrick: "Do not discard a penalty card on the first trick while you have another card.",
     plays: "plays",
     takesTrick: "takes the trick",
     points: "points",
@@ -213,7 +215,22 @@ export const herzelnRuleset: CardRuleset = {
     return Math.max(1, Math.floor(52 / Math.max(1, playerCount)));
   },
 
-  setupRound(state) {
+  setupRound(state, context) {
+    // Omit fixed low diamonds, preserving every penalty card and the opener.
+    const undealt = state.table.drawPile.length;
+    if (undealt > 0) {
+      const removed = new Set(Object.values(state.table.cards)
+        .filter((card) => card.suitId === "diamonds")
+        .sort((a, b) => rankOrder(context, a) - rankOrder(context, b))
+        .slice(0, undealt).map((card) => card.id));
+      const shuffled = [...state.table.turnOrder.flatMap((id) => handOf(state.table, id)), ...state.table.drawPile];
+      const dealt = shuffled.filter((id) => !removed.has(id));
+      state = { ...state, table: { ...state.table,
+        hands: Object.fromEntries(state.table.turnOrder.map((id, index) =>
+          [id, dealt.slice(index * state.handSize, (index + 1) * state.handSize)])),
+        drawPile: shuffled.filter((id) => removed.has(id))
+      } };
+    }
     const counters: Record<string, number | string | boolean | null> = {
       [leadKey]: noLead,
       [trickLeaderKey]: 0,
@@ -265,7 +282,8 @@ export const herzelnRuleset: CardRuleset = {
             lines: [
               "Take as few penalty cards as possible.",
               "Every heart counts one point, the queen of spades counts thirteen.",
-              "Fewest points wins the round."
+              "Fewest points wins the round.",
+              "Individual deals without passing cards. Uneven deals omit the lowest diamonds; all penalty cards remain in play."
             ]
           },
           {
@@ -273,6 +291,7 @@ export const herzelnRuleset: CardRuleset = {
             lines: [
               "The round opens with the two of clubs.",
               "Everyone must follow the suit that was led if they hold it.",
+              "On the first trick, discard no hearts or queen of spades unless your hand contains only penalty cards.",
               "There is no trump: the highest card of the suit led takes the trick.",
               "Whoever takes the trick leads the next one."
             ]
@@ -298,7 +317,8 @@ export const herzelnRuleset: CardRuleset = {
             lines: [
               "Nimm so wenige Strafkarten wie möglich.",
               "Jedes Herz zählt einen Punkt, die Pik-Dame zählt dreizehn.",
-              "Wer am wenigsten hat, gewinnt die Runde."
+              "Wer am wenigsten hat, gewinnt die Runde.",
+              "Einzelne Runden ohne Kartenweitergabe. Bei ungleicher Teilung entfallen die niedrigsten Karos; alle Strafkarten bleiben im Spiel."
             ]
           },
           {
@@ -306,6 +326,7 @@ export const herzelnRuleset: CardRuleset = {
             lines: [
               "Die Runde beginnt mit der Kreuz-Zwei.",
               "Alle müssen die angespielte Farbe bedienen, wenn sie sie haben.",
+              "Im ersten Stich kein Herz und keine Pik-Dame abwerfen, außer du hast nur Strafkarten.",
               "Es gibt keinen Trumpf: Die höchste Karte der angespielten Farbe nimmt den Stich.",
               "Wer den Stich nimmt, spielt den nächsten an."
             ]
@@ -378,7 +399,14 @@ export const herzelnRuleset: CardRuleset = {
 
     const canFollow = hand.some((entry) => state.table.cards[entry]?.suitId === leadSuitId);
 
-    return canFollow ? { allowed: false, hint: text.mustFollow as string } : { allowed: true };
+    if (canFollow) {
+      return { allowed: false, hint: text.mustFollow as string };
+    }
+    if (readNumber(state, trickCountKey) === 0 && penaltyOf(card) > 0 &&
+      hand.some((entry) => penaltyOf(state.table.cards[entry] as CardInstance) === 0)) {
+      return { allowed: false, hint: text.firstTrick as string };
+    }
+    return { allowed: true };
   },
 
   playCard(state, context, playerId, cardId) {
@@ -509,7 +537,7 @@ export const herzelnRuleset: CardRuleset = {
     const stacks: CardTableStackState[] = [
       {
         id: trickZoneId,
-        label: `${text.trick} ${total + (cards.length > 0 ? 1 : 0)}`,
+        label: `${text.trick} ${total + (cards.length > 0 && !isTrickPending(state) ? 1 : 0)}`,
         kind: "zone",
         count: cards.length,
         cards,

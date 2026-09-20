@@ -81,7 +81,8 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     trick: "Stich",
     lastTrick: "Letzter Stich",
     trickResting: "Der Stich liegt noch - kurz warten.",
-    waiting: "wartet"
+    waiting: "wartet",
+    chooseTrump: "Wähle die Trumpffarbe."
   },
   en: {
     intro: "Trick Bets: bid your tricks first, then play. A crown beats everything, a feather nothing.",
@@ -105,7 +106,8 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     trick: "Trick",
     lastTrick: "Last trick",
     trickResting: "The trick is still on the table.",
-    waiting: "waiting"
+    waiting: "waiting",
+    chooseTrump: "Choose the trump suit."
   }
 };
 
@@ -134,7 +136,7 @@ function tricksOf(state: CardGameState, playerId: string): number {
 }
 
 function isBidding(state: CardGameState): boolean {
-  return readText(state, phaseKey) === "bid";
+  return readText(state, phaseKey) === "bid" || readText(state, phaseKey) === "trump-choice";
 }
 
 function isActive(state: CardGameState, playerId: string): boolean {
@@ -226,7 +228,7 @@ export const trickBetRuleset: CardRuleset = {
   turnBased: true,
 
   handSizeFor({ roundNumber, playerCount }) {
-    return Math.max(1, Math.min(roundNumber, Math.floor((deckSize - 1) / Math.max(1, playerCount))));
+    return Math.max(1, Math.min(roundNumber, Math.floor(deckSize / Math.max(1, playerCount))));
   },
 
   setupRound(state, context) {
@@ -235,13 +237,11 @@ export const trickBetRuleset: CardRuleset = {
     let trumpSuitId: string | null = null;
 
     if (trumpCard && !isFeatherCard(trumpCard)) {
-      trumpSuitId = isCrownCard(trumpCard)
-        ? context.deck.suits[Math.floor(Math.random() * context.deck.suits.length)]?.id ?? null
-        : trumpCard.suitId;
+      trumpSuitId = isCrownCard(trumpCard) ? null : trumpCard.suitId;
     }
 
     const counters: Record<string, number | string | null> = {
-      [phaseKey]: "bid",
+      [phaseKey]: trumpCard && isCrownCard(trumpCard) ? "trump-choice" : "bid",
       [trumpKey]: trumpSuitId,
       [leadKey]: noLead,
       [trickLeaderKey]: 0,
@@ -259,6 +259,7 @@ export const trickBetRuleset: CardRuleset = {
       table: {
         ...state.table,
         drawPile: trumpCardId ? state.table.drawPile.slice(1) : state.table.drawPile,
+        activeIndex: trumpCard && isCrownCard(trumpCard) ? state.table.turnOrder.length - 1 : 0,
         zones: {
           ...state.table.zones,
           [trickZoneId]: [],
@@ -294,8 +295,8 @@ export const trickBetRuleset: CardRuleset = {
             title: "A deal",
             lines: [
               "Round 1 deals one card each, round 2 two, and so on.",
-              "One card of the remaining pile is turned over: its suit is trump.",
-              "A feather there means no trump; a crown picks a random trump suit."
+              "One card of the remaining pile is turned over: its suit is trump. With no cards remaining, there is no trump.",
+              "A feather means no trump; for a crown the dealer (last seat) chooses the trump suit before bidding."
             ]
           },
           {
@@ -352,8 +353,8 @@ export const trickBetRuleset: CardRuleset = {
             title: "Der Durchgang",
             lines: [
               "In Runde 1 bekommt jeder eine Karte, in Runde 2 zwei, und so weiter.",
-              "Eine Karte des Reststapels wird aufgedeckt: ihre Farbe ist Trumpf.",
-              "Liegt dort eine Feder, gibt es keinen Trumpf; bei einer Krone wird eine Farbe zufällig bestimmt."
+              "Eine Karte des Reststapels wird aufgedeckt: ihre Farbe ist Trumpf. Ohne Reststapel gibt es keinen Trumpf.",
+              "Liegt dort eine Feder, gibt es keinen Trumpf; bei einer Krone wählt der Geber (letzter Sitz) vor den Ansagen die Trumpffarbe."
             ]
           },
           {
@@ -524,6 +525,13 @@ export const trickBetRuleset: CardRuleset = {
     }
     const text = words(context);
 
+    if (readText(state, phaseKey) === "trump-choice") {
+      const suit = context.deck.suits.find((entry) => actionId === `trump:${entry.id}`);
+      if (!isActive(state, playerId) || !suit) return state;
+      return clearError(writeExtra({ ...state, table: { ...state.table, activeIndex: 0 }, updatedAt: context.now },
+        { [trumpKey]: suit.id, [phaseKey]: "bid" }));
+    }
+
     if (!actionId.startsWith("bid:")) {
       return state;
     }
@@ -537,7 +545,8 @@ export const trickBetRuleset: CardRuleset = {
     }
 
     const dealSize = readNumber(state, dealSizeKey, state.handSize);
-    const bid = Number.parseInt(actionId.slice(4), 10);
+    const rawBid = actionId.slice(4);
+    const bid = /^\d+$/.test(rawBid) ? Number(rawBid) : Number.NaN;
 
     if (!Number.isFinite(bid) || bid < 0 || bid > dealSize) {
       return state;
@@ -588,6 +597,11 @@ export const trickBetRuleset: CardRuleset = {
     }
 
     const enabled = isActive(state, playerId);
+    if (readText(state, phaseKey) === "trump-choice") {
+      return context.deck.suits.map((suit) => ({
+        id: `trump:${suit.id}`, label: `${text.trump}: ${suit.symbol}`, kind: "primary", enabled
+      }));
+    }
     const dealSize = readNumber(state, dealSizeKey, state.handSize);
 
     return Array.from({ length: dealSize + 1 }, (_, bid) => ({
@@ -638,7 +652,7 @@ export const trickBetRuleset: CardRuleset = {
       },
       {
         id: trickZoneId,
-        label: `${text.trick} ${Math.min(readNumber(state, trickCountKey) + 1, readNumber(state, dealSizeKey, state.handSize))}/${readNumber(state, dealSizeKey, state.handSize)}`,
+        label: `${text.trick} ${Math.min(readNumber(state, trickCountKey) + (isTrickPending(state) ? 0 : 1), readNumber(state, dealSizeKey, state.handSize))}/${readNumber(state, dealSizeKey, state.handSize)}`,
         kind: "zone",
         count: trickCards.length,
         cards: trickCards,
@@ -695,6 +709,9 @@ export const trickBetRuleset: CardRuleset = {
 
   privateNote(state, context, playerId) {
     const text = words(context);
+    if (readText(state, phaseKey) === "trump-choice") {
+      return isActive(state, playerId) ? text.chooseTrump as string : text.waiting as string;
+    }
     const bid = bidOf(state, playerId);
 
     if (bid < 0) {
@@ -755,6 +772,12 @@ export const trickBetRuleset: CardRuleset = {
     }
 
     const hand = handOf(state.table, playerId);
+
+    if (readText(state, phaseKey) === "trump-choice") {
+      const suit = bestOf(context.deck.suits.map((entry) => entry.id), (suitId) =>
+        hand.reduce((sum, id) => sum + (state.table.cards[id]?.suitId === suitId ? rankOrder(context, state.table.cards[id] as CardInstance) : 0), 0));
+      return suit ? { kind: "action", actionId: `trump:${suit}` } : { kind: "wait" };
+    }
 
     if (isBidding(state)) {
       const dealSize = readNumber(state, dealSizeKey, state.handSize);

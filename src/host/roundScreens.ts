@@ -39,7 +39,9 @@ function labels(language?: "de" | "en") {
     winner: en ? "Winner" : "Gewinner",
     noWinner: en ? "No winner this round." : "Diese Runde ohne Sieger.",
     points: en ? "pts" : "Pkt.",
-    bot: en ? "AI" : "KI"
+    bot: en ? "AI" : "KI",
+    next: en ? "Ready on your phone to play the next round." : "Am Handy bereit machen, um die nächste Runde zu spielen.",
+    menu: en ? "Main menu" : "Hauptmenü"
     , scoreDetails: en ? "Score details" : "Wertungsaufschlüsselung"
   };
 }
@@ -126,5 +128,7 @@ export function roundScreenHtml(state: RoundScreenStateLike): string | null {
     <p class="ct-screen-lead">${winnerLine}</p>
     <ol class="ct-score">${rows}</ol>
     ${breakdown}
+    <p class="ct-screen-lead">${text.next}</p>
+    <button type="button" class="ct-result-menu" data-card-table-menu>${text.menu}</button>
   </section>`;
 }

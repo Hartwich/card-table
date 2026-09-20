@@ -177,6 +177,11 @@ export const schwarzerPeterRuleset: CardRuleset = {
       working = discardPairs(working, playerId).state;
     }
 
+    const remaining = playersWithCards(working);
+    if (remaining.length === 1) {
+      return finishGame(working, null, null, `${playerName(context, remaining[0] as string)} ${words(context).hasPeter}`);
+    }
+
     const firstHolder = Math.max(
       0,
       working.table.turnOrder.findIndex((playerId) => handOf(working.table, playerId).length > 0)

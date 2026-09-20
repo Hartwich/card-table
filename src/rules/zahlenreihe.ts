@@ -1,5 +1,5 @@
 import type { ScoreEntry, SupportedLanguage } from "@open-party-lab/game-core";
-import { advanceTurn, drawCards, handOf, moveCard, toCardFace } from "../cards/cardTable.js";
+import { advanceTurn, createCardTable, drawCards, handOf, moveCard, toCardFace } from "../cards/cardTable.js";
 import type { CardInstance } from "../cards/cardTypes.js";
 import type {
   CardTableActionState,
@@ -25,7 +25,8 @@ import {
  *
  * Vier Farbreihen von 1 bis 20. Eröffnet wird jede Reihe mit der Elf, danach
  * wird an beiden Enden um genau eins verlängert. Wer am Zug ist, legt so viele
- * Karten an, wie er will und kann; erst wenn nichts mehr passt, wird gezogen.
+ * Karten an, wie er will, mindestens eine. Wer gar nicht anlegen kann, zieht
+ * einzeln bis zu drei Karten; die erste passende beendet nach dem Legen den Zug.
  *
  * Zeigt auf dem Fundament, wie ein Regelwerk mehrere offene Ablagereihen statt
  * eines einzelnen Ablagestapels benutzt und wie ein Zug aus mehreren Aktionen
@@ -34,6 +35,18 @@ import {
 
 const startRank = 11;
 const laidKey = "laidThisTurn";
+const openingKey = "openingCardId";
+
+function openingCard(state: CardGameState): string | undefined {
+  for (const suit of ["rot", "gelb", "gruen", "blau"]) {
+    const id = Object.values(state.table.hands).flat().find((id) => {
+      const card = state.table.cards[id];
+      return card?.suitId === suit && card.rankId === "11";
+    });
+    if (id) return id;
+  }
+  return undefined;
+}
 
 const copy: Record<SupportedLanguage, Record<string, string>> = {
   de: {
@@ -54,6 +67,9 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     noDraw: "kann nicht ziehen und setzt aus",
     wins: "hat alle Karten abgelegt.",
     startHint: "Start: 11",
+    next: "Anlegen",
+    complete: "vollständig",
+    skip: "Aussetzen",
     playable: "Spielbar",
     lastCard: "letzte Karte",
     end: "Runde beenden",
@@ -77,6 +93,9 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     noDraw: "cannot draw and passes",
     wins: "played their last card.",
     startHint: "Start: 11",
+    next: "Next",
+    complete: "complete",
+    skip: "Pass",
     playable: "Playable",
     lastCard: "last card",
     end: "End round",
@@ -147,14 +166,27 @@ export const numberRowsRuleset: CardRuleset = {
   openStartCard: false,
   turnBased: true,
 
+  handSizeFor({ playerCount }) {
+    return playerCount <= 3 ? 20 : playerCount === 4 ? 15 : playerCount === 5 ? 12 : 10;
+  },
+
   setupRound(state, context) {
+    // A deal without an eleven is invalid: reshuffle before choosing the starter.
+    let first = openingCard(state);
+    while (!first) {
+      state = { ...state, table: createCardTable({ deck: context.deck,
+        playerIds: state.table.turnOrder, handSize: state.handSize }) };
+      first = openingCard(state);
+    }
     const zones: Record<string, string[]> = { ...state.table.zones };
 
     for (const suit of context.deck.suits) {
       zones[suit.id] = [];
     }
 
-    return { ...state, table: { ...state.table, zones }, extra: { ...state.extra, [laidKey]: 0 } };
+    return { ...state, table: { ...state.table, zones, direction: 1,
+      activeIndex: state.table.turnOrder.findIndex((id) => handOf(state.table, id).includes(first)) },
+      extra: { ...state.extra, [laidKey]: 0, [openingKey]: first } };
   },
 
   rules(context): CardTableRuleSectionState[] {
@@ -170,13 +202,16 @@ export const numberRowsRuleset: CardRuleset = {
             title: "The deck",
             lines: [
               "Four colours, each with the numbers 1 to 20.",
-              "Every colour builds its own row on the table."
+              "Every colour builds its own row on the table; each colour has exactly one eleven.",
+              "Deal 20 cards each for 2–3 players, 15 for 4, 12 for 5 and 10 for 6. The rest is the draw pile."
             ]
           },
           {
             title: "Opening a row",
             lines: [
               "An empty row can only be started with the 11 of that colour.",
+              "The holder of the red eleven starts; otherwise yellow, green, then blue has priority. Redeal if nobody holds an eleven.",
+              "After playing the starting eleven, the next player takes their turn.",
               "Until a row is open, no other card of that colour can be played."
             ]
           },
@@ -191,15 +226,14 @@ export const numberRowsRuleset: CardRuleset = {
           {
             title: "Your turn",
             lines: [
-              "Play as many cards as you like and can, one after another.",
-              "Press Done to hand over once you are finished.",
-              "If nothing fits, draw one card. If it fits you may play it, otherwise the turn passes.",
+              "Play at least one matching card. You may play more or press Done to keep the rest.",
+              "If nothing fits, draw cards one at a time, up to three. A matching drawn card must be played and immediately ends your turn.",
               "With an empty draw pile a player who cannot play simply passes."
             ]
           },
           {
             title: "End of the round",
-            lines: ["The first player with an empty hand wins the round and scores one point."]
+            lines: ["The first empty hand ends the round. Everyone loses points equal to the sum of their remaining cards; the winner loses none. Highest total (fewest penalties) wins the series; ties are shared."]
           }
         ]
       : [
@@ -211,13 +245,16 @@ export const numberRowsRuleset: CardRuleset = {
             title: "Das Blatt",
             lines: [
               "Vier Farben mit den Zahlen 1 bis 20.",
-              "Jede Farbe bildet auf dem Tisch eine eigene Reihe."
+              "Jede Farbe bildet eine eigene Reihe und enthält genau eine Elf.",
+              "Bei 2–3 Spielern erhält jeder 20 Karten, bei 4 Spielern 15, bei 5 Spielern 12 und bei 6 Spielern 10. Der Rest bildet den Nachziehstapel."
             ]
           },
           {
             title: "Eine Reihe eröffnen",
             lines: [
               "Eine leere Reihe wird ausschließlich mit der 11 dieser Farbe eröffnet.",
+              "Die rote Elf beginnt; fehlt sie auf allen Händen, gilt Gelb vor Grün vor Blau. Ohne Elf auf einer Hand wird neu gemischt und ausgeteilt.",
+              "Nach der Start-Elf ist sofort der nächste Spieler dran.",
               "Solange eine Reihe nicht offen ist, kann keine andere Karte dieser Farbe gelegt werden."
             ]
           },
@@ -232,15 +269,14 @@ export const numberRowsRuleset: CardRuleset = {
           {
             title: "Dein Zug",
             lines: [
-              "Lege so viele Karten an, wie du willst und kannst — eine nach der anderen.",
-              "Mit „Fertig“ gibst du ab, wenn du genug gelegt hast.",
-              "Passt nichts, ziehst du genau eine Karte. Passt sie, darfst du sie legen, sonst ist der Nächste dran.",
+              "Lege mindestens eine passende Karte. Danach darfst du weitere legen oder mit „Fertig“ Karten zurückhalten.",
+              "Passt nichts, ziehst du einzeln bis zu drei Karten. Eine passende gezogene Karte musst du sofort legen; damit endet dein Zug.",
               "Ist der Nachziehstapel leer, setzt aus, wer nicht anlegen kann."
             ]
           },
           {
             title: "Rundenende",
-            lines: ["Wer zuerst keine Karte mehr hat, gewinnt die Runde und bekommt einen Punkt."]
+            lines: ["Die erste leere Hand beendet die Runde. Jeder erhält die Summe seiner übrigen Karten als Minuspunkte; der Sieger erhält keine. Der höchste Serienstand (wenigste Minuspunkte) gewinnt; Gleichstände teilen den Sieg."]
           }
         ];
   },
@@ -261,6 +297,10 @@ export const numberRowsRuleset: CardRuleset = {
     }
 
     const card = state.table.cards[cardId];
+
+    if (typeof state.extra[openingKey] === "string" && cardId !== state.extra[openingKey]) {
+      return { allowed: false, hint: context.language === "en" ? "Play the starting eleven first." : "Lege zuerst die Start-Elf." };
+    }
 
     if (!card || !card.suitId) {
       return { allowed: false };
@@ -302,7 +342,7 @@ export const numberRowsRuleset: CardRuleset = {
 
     const played = appendLog(
       clearError(
-        writeExtra({ ...state, table, updatedAt: context.now }, { [laidKey]: readNumber(state, laidKey) + 1 })
+        writeExtra({ ...state, table, updatedAt: context.now }, { [laidKey]: readNumber(state, laidKey) + 1, [openingKey]: null })
       ),
       playerName(context, playerId),
       `${ends ? text.plays : text.opens} ${face.rankLabel} ${face.suitSymbol}`
@@ -317,7 +357,8 @@ export const numberRowsRuleset: CardRuleset = {
       );
     }
 
-    // Ein Zug darf weiterlaufen, solange noch etwas passt.
+    if (state.extra[openingKey] || state.drawnThisTurn > 0) return endTurn(played, context);
+    // Nach mindestens einer Karte dürfen weitere gelegt oder zurückgehalten werden.
     return playableCount(played, context, playerId) > 0 ? played : endTurn(played, context);
   },
 
@@ -332,7 +373,7 @@ export const numberRowsRuleset: CardRuleset = {
       return withError(state, text.canStillPlay as string);
     }
 
-    if (state.drawnThisTurn > 0) {
+    if (readNumber(state, laidKey) > 0 || state.drawnThisTurn >= 3) {
       return endTurn(state, context);
     }
 
@@ -345,7 +386,7 @@ export const numberRowsRuleset: CardRuleset = {
     const drawn = clearError({
       ...state,
       table: result.state,
-      drawnThisTurn: 1,
+      drawnThisTurn: state.drawnThisTurn + 1,
       updatedAt: context.now
     });
 
@@ -353,7 +394,9 @@ export const numberRowsRuleset: CardRuleset = {
       return appendLog(drawn, playerName(context, playerId), text.drew as string);
     }
 
-    return appendLog(endTurn(drawn, context), playerName(context, playerId), `${text.drew} - ${text.passed}`);
+    return drawn.drawnThisTurn >= 3 || drawn.table.drawPile.length === 0
+      ? appendLog(endTurn(drawn, context), playerName(context, playerId), `${text.drew} - ${text.passed}`)
+      : appendLog(drawn, playerName(context, playerId), text.drew as string);
   },
 
   runAction(state, context, playerId, actionId) {
@@ -363,7 +406,7 @@ export const numberRowsRuleset: CardRuleset = {
       return state;
     }
 
-    if (readNumber(state, laidKey) === 0 && state.drawnThisTurn === 0) {
+    if (readNumber(state, laidKey) === 0) {
       return withError(state, text.nothingYet as string);
     }
 
@@ -378,16 +421,16 @@ export const numberRowsRuleset: CardRuleset = {
     return [
       {
         id: "draw",
-        label: text.draw as string,
+        label: (state.table.drawPile.length === 0 ? text.skip : text.draw) as string,
         kind: "primary",
-        enabled: active && !canPlay && state.drawnThisTurn === 0,
+        enabled: active && !canPlay && state.drawnThisTurn < 3 && readNumber(state, laidKey) === 0,
         hint: canPlay ? (text.canStillPlay as string) : undefined
       },
       {
         id: "pass",
         label: text.done as string,
         kind: "secondary",
-        enabled: active && (readNumber(state, laidKey) > 0 || state.drawnThisTurn > 0)
+        enabled: active && readNumber(state, laidKey) > 0
       }
     ];
   },
@@ -396,9 +439,9 @@ export const numberRowsRuleset: CardRuleset = {
     const text = words(context);
     const enabled = state.phase === "playing" && !state.gameOver;
 
+    const active = state.table.turnOrder[state.table.activeIndex] ?? "";
     return [
-      { id: "draw", label: text.draw as string, kind: "primary", enabled },
-      { id: "pass", label: text.done as string, kind: "secondary", enabled },
+      ...numberRowsRuleset.controllerActions(state, context, active),
       { id: "end", label: text.end as string, kind: "danger", enabled }
     ];
   },
@@ -429,11 +472,17 @@ export const numberRowsRuleset: CardRuleset = {
     return context.deck.suits.map((suit) => {
       const cards = rowCards(state, suit.id).sort((left, right) => rankValue(left) - rankValue(right));
       const shown = cards.length > 1 ? [cards[0] as CardInstance, cards[cards.length - 1] as CardInstance] : cards;
+      const ends = rowEnds(state, suit.id);
+      const next = ends ? [ends.low > 1 ? ends.low - 1 : null, ends.high < 20 ? ends.high + 1 : null].filter((value) => value !== null) : [startRank];
+      const text = words(context);
+      const hint = next.length ? `${text.next}: ${next.join(" / ")}` : text.complete;
 
       return {
         id: suit.id,
-        label: suit.label,
+        label: `${suit.symbol} ${suit.label} · ${hint}`,
         kind: "zone" as const,
+        layout: "spread" as const,
+        capacity: 2,
         count: cards.length,
         cards: shown.map((card) => toCardFace(context.deck, card)),
         faceDown: false
@@ -442,13 +491,20 @@ export const numberRowsRuleset: CardRuleset = {
   },
 
   condition(state, context) {
+    const opening = state.extra[openingKey];
+    if (typeof opening === "string" && state.table.cards[opening]) {
+      const face = toCardFace(context.deck, state.table.cards[opening]);
+      return { label: `Start: ${face.rankLabel} ${face.suitLabel}`, symbol: face.suitSymbol, color: face.color };
+    }
     const opened = context.deck.suits.some((suit) => rowCards(state, suit.id).length > 0);
 
     return opened ? undefined : { label: words(context).startHint as string, color: "neutral" };
   },
 
   privateNote(state, context, playerId) {
-    return `${words(context).playable}: ${playableCount(state, context, playerId)}`;
+    const drawn = isActive(state, playerId) && state.drawnThisTurn > 0
+      ? ` · ${context.language === "en" ? "Drawn" : "Gezogen"}: ${state.drawnThisTurn}/3` : "";
+    return `${words(context).playable}: ${playableCount(state, context, playerId)}${drawn}`;
   },
 
   seatStatus(state, context, playerId) {
@@ -460,9 +516,10 @@ export const numberRowsRuleset: CardRuleset = {
   },
 
   buildScore(state): ScoreEntry[] {
-    return state.winnerPlayerId
-      ? [{ playerId: state.winnerPlayerId, delta: 1, reason: "Zahlenreihe" }]
-      : [];
+    if (!state.winnerPlayerId) return [];
+    return state.table.turnOrder.map((playerId) => ({ playerId,
+      delta: -handOf(state.table, playerId).reduce((sum, id) => sum + rankValue(state.table.cards[id] as CardInstance), 0) || 0,
+      reason: "Zahlenreihe" }));
   },
 
   /**
@@ -505,7 +562,7 @@ export const numberRowsRuleset: CardRuleset = {
       return { kind: "play", cardId };
     }
 
-    if (state.drawnThisTurn === 0) {
+    if (readNumber(state, laidKey) === 0 && state.drawnThisTurn < 3) {
       return { kind: "draw" };
     }
 

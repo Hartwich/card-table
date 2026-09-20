@@ -138,7 +138,7 @@ export function renderCardTableHtml(
     ? `<span class="ct-chip is-error">${escapeHtml(state.lastError)}</span>`
     : "";
 
-  return `<div class="ct-table">
+  return `<div class="ct-table${state.rulesetId === "zahlenreihe" ? " is-number-rows" : ""}">
     <header class="ct-head">
       <span class="ct-head-title">${escapeHtml(state.title)}</span>
       <div class="ct-head-side">
@@ -149,7 +149,7 @@ export function renderCardTableHtml(
       </div>
     </header>
     <div class="ct-seats">${state.seats.map((seat) => seatHtml(seat, state.backStyle, text.bot)).join("")}</div>
-    <div class="ct-stacks">${stacks.map((stack) => stackHtml(stack, state.backStyle, cardWidth, state.cardStyle)).join("")}</div>
+    <div class="ct-stacks">${stacks.map((stack) => stackHtml(stack, state.backStyle, state.rulesetId === "zahlenreihe" ? (stack.kind === "draw" ? 48 : 108) : cardWidth, state.cardStyle)).join("")}</div>
     <footer class="ct-actions">${state.hostActions.map(actionHtml).join("")}</footer>
   </div>
   ${options.rulesOpen ? rulesHtml(state, language) : ""}`;
@@ -202,6 +202,9 @@ export const cardTableStyles = `
 .ct-seat-hand{display:flex;flex:0 0 auto}
 .ct-mini{display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
 .ct-stacks{display:flex;align-items:center;justify-content:center;gap:clamp(18px,3.4vw,52px);flex-wrap:wrap}
+.is-number-rows .ct-stacks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-content:center}
+.is-number-rows .ct-stack[data-stack="draw"]{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:18px}
+.is-number-rows .ct-stack-label{white-space:normal;text-align:center;flex-wrap:wrap;justify-content:center;padding:4px 8px}
 .ct-stack{display:grid;gap:10px;justify-items:center}
 .ct-stack-cards{display:flex;align-items:flex-end}
 .ct-stack-cards.is-pile{position:relative}
@@ -232,9 +235,10 @@ export const cardTableStyles = `
 .ct-rules-body section{break-inside:avoid;margin:0 0 18px}
 .ct-rules-body h3{margin:0 0 6px;font-family:var(--ct-display);font-size:1.15rem;font-weight:500;color:var(--ct-accent)}
 .ct-rules-body ul{margin:0;padding-left:20px;display:grid;gap:5px;line-height:1.45;font-size:1rem}
-.ct-screen{width:min(760px,88%);padding:34px 40px;border-radius:24px;text-align:center;
+.ct-screen{width:min(760px,88%);max-height:100%;overflow:auto;padding:34px 40px;border-radius:24px;text-align:center;
   background:var(--ct-surface);border:1px solid var(--ct-line)}
 .ct-screen h1{margin:0;font-family:var(--ct-display);font-size:2.6rem;font-weight:500}
+.ct-result-menu{pointer-events:auto;margin-top:18px;min-height:48px;padding:10px 24px;border:1px solid var(--ct-line);border-radius:12px;background:var(--ct-surface);color:var(--ct-ink);font:inherit;cursor:pointer}
 .ct-screen-lead{margin:12px 0 0;color:var(--ct-muted);font-size:1.15rem}
 .ct-screen-meta{display:flex;gap:34px;justify-content:center;margin:22px 0 0}
 .ct-screen-meta div{display:grid;gap:2px}

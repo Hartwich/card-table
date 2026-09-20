@@ -33,6 +33,16 @@ import {
  */
 
 const setsKey = (playerId: string): string => `sets:${playerId}`;
+const missKey = (targetId: string, rankId: string): string => `fish-missing:${targetId}:${rankId}`;
+
+/** Öffentliche Absagen gelten nur, bis diese Hand neue Karten erhält. */
+function forgetMissing(state: CardGameState, playerId: string): CardGameState {
+  const extra = { ...state.extra };
+  for (const key of Object.keys(extra)) {
+    if (key.startsWith(`fish-missing:${playerId}:`)) delete extra[key];
+  }
+  return { ...state, extra };
+}
 
 const copy: Record<SupportedLanguage, Record<string, string>> = {
   de: {
@@ -53,6 +63,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     set: "legt ein Quartett ab",
     sets: "Quartette",
     winner: "hat die meisten Quartette.",
+    tied: "teilen sich den Sieg.",
     end: "Runde beenden",
     ended: "Der Host hat die Runde beendet."
   },
@@ -74,6 +85,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     set: "completes a set",
     sets: "sets",
     winner: "has the most sets.",
+    tied: "share the win.",
     end: "End round",
     ended: "The host ended the round."
   }
@@ -159,19 +171,27 @@ function checkEnd(state: CardGameState, context: CardRulesetContext): CardGameSt
     state.table.turnOrder[0] ?? ""
   );
 
+  const winners = state.table.turnOrder.filter((playerId) => setsOf(state, playerId) === setsOf(state, best));
   return finishGame(
     state,
-    best || null,
-    best ? playerName(context, best) : null,
-    best ? `${playerName(context, best)} ${text.winner}` : (text.ended as string)
+    winners.length === 1 ? best : null,
+    winners.length === 1 ? playerName(context, best) : null,
+    winners.length > 1
+      ? `${winners.map((id) => playerName(context, id)).join(", ")} ${text.tied}`
+      : best ? `${playerName(context, best)} ${text.winner}` : (text.ended as string)
   );
 }
 
 /** Gibt ab, wenn die Frage ins Leere ging. */
 function passTurn(state: CardGameState, context: CardRulesetContext): CardGameState {
+  let table = advanceTurn(state.table);
+  // Ohne Nachziehkarten sind leere Hände ausgeschieden.
+  for (let step = 1; step < table.turnOrder.length && table.drawPile.length === 0 && handOf(table, table.turnOrder[table.activeIndex] as string).length === 0; step += 1) {
+    table = advanceTurn(table);
+  }
   return {
     ...state,
-    table: advanceTurn(state.table),
+    table,
     turnNumber: state.turnNumber + 1,
     updatedAt: context.now
   };
@@ -188,7 +208,7 @@ export const fischenRuleset: CardRuleset = {
   openStartCard: false,
   turnBased: true,
 
-  setupRound(state) {
+  setupRound(state, context) {
     const counters: Record<string, number> = {};
 
     for (const playerId of state.table.turnOrder) {
@@ -201,7 +221,7 @@ export const fischenRuleset: CardRuleset = {
       working = discardSets(working, playerId).state;
     }
 
-    return working;
+    return checkEnd(working, context) ?? working;
   },
 
   rules(context): CardTableRuleSectionState[] {
@@ -226,14 +246,15 @@ export const fischenRuleset: CardRuleset = {
             lines: [
               "Has the player none, you draw one card from the pile.",
               "Is it exactly the rank you asked for, you go again. Otherwise the turn passes.",
-              "With an empty hand you simply draw a card, as long as the pile has any."
+              "With an empty hand, or if all other hands are empty, draw a card and continue your turn while the pile has cards.",
+              "With an empty pile, a failed request passes the turn; empty hands are skipped."
             ]
           },
           {
             title: "Sets",
             lines: [
               "Four cards of a rank are discarded automatically and counted as a set.",
-              "The round ends when no cards are left anywhere."
+              "The round ends when every set has been collected. Players tied for most sets share the win."
             ]
           }
         ]
@@ -255,14 +276,15 @@ export const fischenRuleset: CardRuleset = {
             lines: [
               "Hat er keine, ziehst du eine Karte vom Stapel.",
               "Ist es genau der gefragte Wert, bist du noch einmal dran. Sonst ist der Nächste dran.",
-              "Mit leerer Hand ziehst du einfach eine Karte, solange der Stapel noch welche hat."
+              "Mit leerer Hand oder wenn alle anderen Hände leer sind, ziehst du eine Karte und setzt deinen Zug fort, solange der Stapel Karten hat.",
+              "Bei leerem Stapel gibt eine erfolglose Frage den Zug weiter; leere Hände werden übersprungen."
             ]
           },
           {
             title: "Quartette",
             lines: [
               "Vier gleiche Werte wandern automatisch auf die Ablage und zählen als Quartett.",
-              "Die Runde endet, wenn nirgends mehr Karten liegen."
+              "Die Runde endet, wenn alle Quartette gesammelt sind. Bei Gleichstand teilen sich die Führenden den Sieg."
             ]
           }
         ];
@@ -320,11 +342,12 @@ export const fischenRuleset: CardRuleset = {
       }
 
       next = appendLog(
-        { ...next, table },
+        forgetMissing({ ...next, table }, playerId),
         playerName(context, choiceId),
         `${text.hands} ${matches.length} ${text.cardsOver}`
       );
     } else if (next.table.drawPile.length === 0) {
+      next = writeExtra(next, { [missKey(choiceId, card.rankId)]: true });
       const empty = discardSets(next, playerId);
       return checkEnd(empty.state, context) ?? passTurn(empty.state, context);
     } else {
@@ -333,7 +356,7 @@ export const fischenRuleset: CardRuleset = {
       const drawn = drawnId ? next.table.cards[drawnId] : null;
 
       next = appendLog(
-        { ...next, table: result.state },
+        forgetMissing(writeExtra({ ...next, table: result.state }, { [missKey(choiceId, card.rankId)]: true }), playerId),
         playerName(context, playerId),
         text.goFish as string
       );
@@ -353,7 +376,7 @@ export const fischenRuleset: CardRuleset = {
       next = appendLog(next, playerName(context, playerId), text.set as string);
     }
 
-    return checkEnd(next, context) ?? next;
+    return checkEnd(next, context) ?? (next.table.drawPile.length === 0 && handOf(next.table, playerId).length === 0 ? passTurn(next, context) : next);
   },
 
   drawCard(state, context, playerId) {
@@ -374,9 +397,10 @@ export const fischenRuleset: CardRuleset = {
     }
 
     const result = drawCards(state.table, playerId, 1);
-    const drawn = discardSets({ ...clearError(state), table: result.state }, playerId);
+    const drawn = discardSets(forgetMissing({ ...clearError(state), table: result.state, turnNumber: state.turnNumber + 1, updatedAt: context.now }, playerId), playerId);
 
-    return appendLog(drawn.state, playerName(context, playerId), text.goFish as string);
+    const next = appendLog(drawn.state, playerName(context, playerId), text.goFish as string);
+    return checkEnd(next, context) ?? next;
   },
 
   runAction(state, context, playerId, actionId) {
@@ -494,8 +518,10 @@ export const fischenRuleset: CardRuleset = {
       }
     }
 
-    const cardId = bestOf(hand, (entry) => counts.get(state.table.cards[entry]?.rankId ?? "") ?? 0);
-    const target = bestOf(opponents, (entry) => handOf(state.table, entry).length);
+    const askable = hand.filter((id) => opponents.some((target) => !state.extra[missKey(target, state.table.cards[id]?.rankId ?? "")]));
+    const cardId = bestOf(askable.length > 0 ? askable : hand, (entry) => counts.get(state.table.cards[entry]?.rankId ?? "") ?? 0);
+    const candidates = cardId ? opponents.filter((target) => !state.extra[missKey(target, state.table.cards[cardId]?.rankId ?? "")]) : [];
+    const target = bestOf(candidates.length > 0 ? candidates : opponents, (entry) => handOf(state.table, entry).length);
 
     if (!cardId || !target) {
       return { kind: "draw" };

@@ -232,14 +232,30 @@ npm run dev:all
 
 ## Bekannte Grenzen
 
+Rundenfortsetzung: Am Handy erscheint nach dem Ergebnis „Bereit“. Sobald alle
+Menschen bereit sind, startet die nächste Runde; KI-Sitze warten nicht auf eine
+Bestätigung. Punkte werden innerhalb desselben Regelwerks weitergeführt.
+Stichwette beginnt jede neue Serie mit einer Karte und erhöht die Kartenzahl je
+Runde bis zur vollen Austeilung. „Hauptmenü“ am Host beendet die Serie und führt
+zur Spielauswahl zurück.
+
+Regelprüfung: Mau-Mau erzwingt Strafziehen und erlaubt nach dem Ziehen nur die
+neue Karte. Schwimmen erkennt auch ausgeteilte 31. Herzeln erhält bei ungleicher
+Teilung alle Strafkarten und begrenzt Strafabwürfe im ersten Stich. Bei Lügen
+bleibt die letzte Karte anfechtbar; der nächste Spieler kann sie akzeptieren.
+Fischen beendet auch das letzte gezogene Quartett und wertet Gleichstände.
+Schwimmen und Zahlenreihe bleiben die im Regeltext beschriebenen Varianten.
+
 - Keine Ansagepflicht bei "Mau" — die letzte Karte wird nur angezeigt.
 - Außer Stichwette, Herzeln und Doppelkopf geben alle Regelwerke nur einen Punkt
   für den Rundensieg.
 - Schwimmen wechselt den Geber nicht, es beginnt immer der erste Sitzplatz.
-- Die Stichwette wählt bei einer Krone als Trumpfkarte eine zufällige
-  Trumpffarbe, statt den Geber entscheiden zu lassen.
-- Doppelkopf kennt weder Ansagen (Re/Kontra) noch Solo oder Hochzeit; die
-  Parteien stehen mit den Kreuz-Damen fest.
+- Bei einer Krone als Trumpfkarte wählt der Geber der Stichwette die Trumpffarbe
+  am Handy vor den Ansagen.
+- Doppelkopf bietet Ansagen, Soli und mit beiden Kreuz-Damen direkt beim
+  Vorbehalt stille Hochzeit, erster Fehl oder erster Trumpf geht mit. Die stille
+  Hochzeit meldet öffentlich gesund; offene Hochzeiten suchen den Partner
+  innerhalb der ersten drei Stiche.
 - Herzeln schiebt vor der Runde keine Karten weiter.
 - Ein Haufen (`layout: "pile"`) zeigt höchstens drei Karten offen; eine Auslage
   (`layout: "spread"`) zeigt alle, wird dafür aber schmaler, je mehr es sind.

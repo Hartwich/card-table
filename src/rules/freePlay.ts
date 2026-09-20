@@ -190,7 +190,7 @@ export const freePlayRuleset: CardRuleset = {
   },
 
   runAction(state, context, playerId, actionId) {
-    if (actionId !== "pass") {
+    if (actionId !== "pass" || state.table.turnOrder[state.table.activeIndex] !== playerId) {
       return state;
     }
 

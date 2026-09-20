@@ -1,4 +1,15 @@
 import type { GameManifest } from "@open-party-lab/game-core";
+import { resolveCardRuleset } from "./rules/index.js";
+import { resolveCardDeck } from "./cards/deckPresets.js";
+
+function selectionRules(id: string) {
+  const ruleset = resolveCardRuleset(id);
+  const rules = (language: "de" | "en") => ruleset.rules({
+    language, deck: resolveCardDeck(ruleset.defaultDeckId), now: 0,
+    playerNames: {}, playerColors: {}, scores: {}, settings: {}, previousExtra: {}
+  });
+  return { de: rules("de"), en: rules("en") };
+}
 
 export const cardTableRoomSettingKeys = {
   ruleset: "cardTableRuleset",
@@ -97,7 +108,7 @@ export const cardTableManifest = {
             label: "Freies Spiel",
             description: "Offener Tisch ohne Regeln: jede Karte darf abgelegt werden."
           }
-        ]
+        ].map((option) => ({ ...option, rules: selectionRules(option.id) }))
       },
       {
         kind: "select",

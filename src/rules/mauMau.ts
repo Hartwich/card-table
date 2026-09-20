@@ -66,7 +66,9 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     ended: "Der Host hat die Runde beendet.",
     mau: "Mau!",
     wins: "gewinnt die Runde.",
-    exhausted: "Es sind keine Karten mehr im Stapel."
+    exhausted: "Es sind keine Karten mehr im Stapel.",
+    onlyDrawn: "Nach dem Ziehen darfst du nur die gezogene Karte legen.",
+    blocked: "Niemand kann mehr ziehen oder legen. Die Runde endet ohne Sieger."
   },
   en: {
     intro: "Mau Mau: match suit or rank. 7 draws two, 8 skips, 9 reverses, the jack wishes a suit.",
@@ -93,7 +95,9 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     ended: "The host ended the round.",
     mau: "Mau!",
     wins: "wins the round.",
-    exhausted: "No cards left in the pile."
+    exhausted: "No cards left in the pile.",
+    onlyDrawn: "After drawing, you may only play the card you just drew.",
+    blocked: "Nobody can draw or play. The round ends without a winner."
   }
 };
 
@@ -168,7 +172,8 @@ export const mauMauRuleset: CardRuleset = {
               "7 — the next player draws two. Sevens stack: play one on top and the whole penalty moves on.",
               "8 — the next player is skipped.",
               "9 — the direction of play reverses. With two players it works like a skip.",
-              "Jack — you name a suit. Only that suit counts until the next jack."
+              "Jack — you name a suit for the next card; another jack is also allowed.",
+              "The opening card has no special effect. An opening joker accepts any card."
             ]
           },
           {
@@ -184,7 +189,8 @@ export const mauMauRuleset: CardRuleset = {
             title: "End of the round",
             lines: [
               "The first player with an empty hand wins the round and scores one point.",
-              "An empty draw pile is refilled from the discard pile, so the round never stalls."
+              "An empty draw pile is refilled from the discard pile, keeping the top card.",
+              "If there are still no cards, draw as many as possible and pass. If nobody can draw or play, the round ends without a winner."
             ]
           },
           {
@@ -215,7 +221,8 @@ export const mauMauRuleset: CardRuleset = {
               "7 — der Nächste zieht zwei. Siebenen stapeln sich: Wer eine drauflegt, gibt die ganze Strafe weiter.",
               "8 — der Nächste setzt aus.",
               "9 — die Spielrichtung dreht sich. Zu zweit wirkt sie wie Aussetzen.",
-              "Bube — du wünschst dir eine Farbe. Bis zum nächsten Buben zählt nur diese Farbe."
+              "Bube — du wünschst dir die Farbe der nächsten Karte; ein weiterer Bube ist ebenfalls erlaubt.",
+              "Die Startkarte hat keine Sonderwirkung. Auf einen Start-Joker passt jede Karte."
             ]
           },
           {
@@ -231,7 +238,8 @@ export const mauMauRuleset: CardRuleset = {
             title: "Rundenende",
             lines: [
               "Wer zuerst keine Karte mehr hat, gewinnt die Runde und bekommt einen Punkt.",
-              "Ist der Nachziehstapel leer, wird die Ablage neu gemischt — die Runde kann nicht steckenbleiben."
+              "Ist der Nachziehstapel leer, wird die Ablage bis auf die oberste Karte neu gemischt.",
+              "Fehlen weiterhin Karten, ziehst du so viele wie möglich und gibst ab. Kann niemand mehr ziehen oder legen, endet die Runde ohne Sieger."
             ]
           },
           {
@@ -267,6 +275,10 @@ export const mauMauRuleset: CardRuleset = {
       return { allowed: false };
     }
 
+    if (state.drawnThisTurn > 0 && state.extra.mauDrawnCardId !== cardId) {
+      return { allowed: false, hint: text.onlyDrawn as string };
+    }
+
     if (state.pendingDraw > 0) {
       return mauMauRules.drawTwoRankIds.includes(card.rankId as never)
         ? { allowed: true }
@@ -274,6 +286,10 @@ export const mauMauRuleset: CardRuleset = {
     }
 
     if (isWild(context.deck, card)) {
+      return { allowed: true };
+    }
+
+    if (state.wishSuitId === null && top.suitId === null && isWild(context.deck, top)) {
       return { allowed: true };
     }
 
@@ -344,6 +360,7 @@ export const mauMauRuleset: CardRuleset = {
         table,
         pendingDraw,
         drawnThisTurn: 0,
+        extra: { ...state.extra, mauDrawnCardId: null },
         wishSuitId,
         turnNumber: state.turnNumber + 1,
         updatedAt: context.now
@@ -370,10 +387,6 @@ export const mauMauRuleset: CardRuleset = {
       const penalty = state.pendingDraw;
       const result = drawCards(state.table, playerId, penalty);
 
-      if (result.exhausted && result.drawnCardIds.length === 0) {
-        return withError(state, text.exhausted as string);
-      }
-
       return appendLog(
         clearError({
           ...state,
@@ -384,7 +397,7 @@ export const mauMauRuleset: CardRuleset = {
           updatedAt: context.now
         }),
         playerName(context, playerId),
-        `${text.drewMany} ${penalty} ${text.cards}`
+        `${text.drewMany} ${result.drawnCardIds.length} ${text.cards}`
       );
     }
 
@@ -392,13 +405,23 @@ export const mauMauRuleset: CardRuleset = {
       const result = drawCards(state.table, playerId, 1);
 
       if (result.exhausted) {
-        return withError(state, text.exhausted as string);
+        const anyoneCanPlay = state.table.turnOrder.some((id, activeIndex) =>
+          hasPlayableCard({ ...state, table: { ...state.table, activeIndex } }, context, id)
+        );
+        if (!anyoneCanPlay) {
+          return finishGame(state, null, null, text.blocked as string);
+        }
+        return appendLog(clearError({
+          ...state, table: advanceTurn(state.table), drawnThisTurn: 0,
+          turnNumber: state.turnNumber + 1, updatedAt: context.now
+        }), playerName(context, playerId), `${text.exhausted} ${text.passed}`);
       }
 
       const drawn = clearError({
         ...state,
         table: result.state,
         drawnThisTurn: 1,
+        extra: { ...state.extra, mauDrawnCardId: result.drawnCardIds[0] ?? null },
         updatedAt: context.now
       });
 
@@ -428,7 +451,11 @@ export const mauMauRuleset: CardRuleset = {
       return state;
     }
 
-    if (state.drawnThisTurn === 0 && state.pendingDraw === 0) {
+    if (state.pendingDraw > 0) {
+      return withError(state, text.mustSeven as string);
+    }
+
+    if (state.drawnThisTurn === 0) {
       return withError(state, text.mustDraw as string);
     }
 

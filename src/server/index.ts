@@ -92,7 +92,9 @@ function resolveHandSize(
   );
 
   if (!ruleset.handSizeFor) {
-    return configured;
+    // Keep the deal even and reserve the opening discard when needed.
+    const available = countDeckCards(deck) - (ruleset.openStartCard ? 1 : 0);
+    return Math.max(1, Math.min(configured, Math.floor(available / Math.max(1, seatCount))));
   }
 
   return Math.max(
@@ -196,7 +198,7 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
     deck: resolveCardDeck(state.deckId),
     language: context.language,
     now: context.now,
-    roundNumber: context.roundNumber,
+    roundNumber: typeof state.extra.seriesRound === "number" ? state.extra.seriesRound : context.roundNumber,
     playerNames,
     playerColors,
     scores,
@@ -207,6 +209,11 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
 
 function createRuntimeState(context: ServerGameContext): CardGameState {
   const ruleset = resolveRuleset(context);
+  const previous = context.previousRound?.state as Partial<CardGameState> | undefined;
+  const seriesRound = previous?.rulesetId === ruleset.id
+    ? Number(previous.extra?.seriesRound ?? 1) + 1
+    : 1;
+  context = { ...context, roundNumber: seriesRound };
   const deck = resolveDeck(context, ruleset);
   const bots = resolveBotSeats(context, ruleset);
   const botScores = carryBotScores(context, bots);
@@ -227,6 +234,7 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     deck,
     language: context.language,
     now: context.now,
+    roundNumber: context.roundNumber,
     playerNames: {
       ...Object.fromEntries(context.players.map((player) => [player.id, player.name])),
       ...Object.fromEntries(bots.map((bot) => [bot.id, bot.name]))
@@ -259,7 +267,7 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
     log: [],
     nextLogId: 1,
     gameOver: false,
-    extra: {},
+    extra: { seriesRound },
     bots,
     botScores,
     botReadyAt: null,
@@ -534,9 +542,9 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
     return createRuntimeState(context);
   },
 
-  startRound(_state, context) {
-    const state = createRuntimeState(context);
-
+  startRound(state, context) {
+    // The intro state already contains the deal, previous scores and series
+    // number. Recreating it here discards the previous-round context.
     return transitionRoundState(state, "playing", context.now, {
       startedAt: context.now,
       message: state.message

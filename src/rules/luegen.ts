@@ -1,6 +1,6 @@
 import type { ScoreEntry, SupportedLanguage } from "@open-party-lab/game-core";
 import { advanceTurn, handOf, moveCard, toCardFace } from "../cards/cardTable.js";
-import type { CardInstance, CardRankDefinition } from "../cards/cardTypes.js";
+import type { CardRankDefinition } from "../cards/cardTypes.js";
 import type {
   CardTableActionState,
   CardTableRuleSectionState,
@@ -37,11 +37,14 @@ const pileZoneId = "stapel";
 const claimKey = "claimIndex";
 const lastPlayerKey = "lastPlayerId";
 const lastCardKey = "lastCardId";
+const pendingWinnerKey = "pendingWinnerId";
 
 const copy: Record<SupportedLanguage, Record<string, string>> = {
   de: {
     intro: "Lügen: Leg verdeckt ab und sag den geforderten Wert an - oder bluff.",
     doubt: "Zweifeln",
+    accept: "Letzte Karte akzeptieren",
+    pending: "Letzte Karte: anzweifeln oder akzeptieren.",
     notYourTurn: "Du bist nicht am Zug.",
     notInHand: "Diese Karte liegt nicht auf deiner Hand.",
     nothingToDoubt: "Es liegt nichts zum Anzweifeln.",
@@ -62,6 +65,8 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
   en: {
     intro: "Cheat: play a card face down and claim the required rank - or bluff.",
     doubt: "Call bluff",
+    accept: "Accept last card",
+    pending: "Last card: call bluff or accept.",
     notYourTurn: "It is not your turn.",
     notInHand: "That card is not in your hand.",
     nothingToDoubt: "There is nothing to call.",
@@ -132,7 +137,7 @@ function handPileTo(
       turnNumber: state.turnNumber + 1,
       updatedAt: context.now
     },
-    { [claimKey]: 0, [lastPlayerKey]: null, [lastCardKey]: null }
+    { [claimKey]: 0, [lastPlayerKey]: null, [lastCardKey]: null, [pendingWinnerKey]: null }
   );
 }
 
@@ -151,7 +156,7 @@ export const luegenRuleset: CardRuleset = {
     return {
       ...state,
       table: { ...state.table, zones: { ...state.table.zones, [pileZoneId]: [] } },
-      extra: { ...state.extra, [claimKey]: 0, [lastPlayerKey]: null, [lastCardKey]: null }
+      extra: { ...state.extra, [claimKey]: 0, [lastPlayerKey]: null, [lastCardKey]: null, [pendingWinnerKey]: null }
     };
   },
 
@@ -167,7 +172,7 @@ export const luegenRuleset: CardRuleset = {
           {
             title: "Your turn",
             lines: [
-              "The table announces which rank is due — aces, then twos, then threes, and so on.",
+              "The table announces the required rank in the selected deck's rank order, repeating after the final rank.",
               "Play exactly one card face down onto the pile and claim that rank.",
               "Nobody sees the card. You may play the real rank or bluff with anything."
             ]
@@ -184,8 +189,8 @@ export const luegenRuleset: CardRuleset = {
           {
             title: "The last card",
             lines: [
-              "A card that empties your hand is always turned over.",
-              "Honest? You win the round. A bluff? You take the pile and play continues."
+              "Your last card stays face down and can still be challenged by any other player.",
+              "The next player can accept it to award you the win. If challenged, an honest last card wins; a bluff takes the pile and play continues."
             ]
           },
           {
@@ -204,7 +209,7 @@ export const luegenRuleset: CardRuleset = {
           {
             title: "Dein Zug",
             lines: [
-              "Der Tisch sagt an, welcher Wert dran ist — erst Ass, dann Zwei, dann Drei, und so weiter.",
+              "Der Tisch sagt den geforderten Wert in der Reihenfolge des gewählten Decks an; nach dem letzten Wert beginnt die Folge erneut.",
               "Leg genau eine Karte verdeckt auf den Stapel und sag diesen Wert an.",
               "Niemand sieht die Karte. Du darfst den echten Wert legen oder mit irgendetwas bluffen."
             ]
@@ -221,8 +226,8 @@ export const luegenRuleset: CardRuleset = {
           {
             title: "Die letzte Karte",
             lines: [
-              "Eine Karte, die deine Hand leert, wird immer aufgedeckt.",
-              "War sie ehrlich, gewinnst du die Runde. War sie gelogen, nimmst du den Stapel und es geht weiter."
+              "Deine letzte Karte bleibt verdeckt und kann von jedem anderen noch angezweifelt werden.",
+              "Der nächste Spieler kann sie akzeptieren und dir den Sieg geben. Beim Anzweifeln gewinnt eine ehrliche letzte Karte; bei einer Lüge nimmst du den Stapel und es geht weiter."
             ]
           },
           {
@@ -241,6 +246,10 @@ export const luegenRuleset: CardRuleset = {
 
   canPlayCard(state, context, playerId, cardId) {
     const text = words(context);
+
+    if (readText(state, pendingWinnerKey)) {
+      return { allowed: false, hint: text.pending as string };
+    }
 
     if (!handOf(state.table, playerId).includes(cardId)) {
       return { allowed: false, hint: text.notInHand as string };
@@ -261,7 +270,6 @@ export const luegenRuleset: CardRuleset = {
     }
 
     const claimed = claimRank(state, context);
-    const card = state.table.cards[cardId] as CardInstance;
     const table = moveCard(state.table, cardId, { kind: "zone", zoneId: pileZoneId }, "top");
     const played = appendLog(
       clearError(
@@ -274,36 +282,13 @@ export const luegenRuleset: CardRuleset = {
       `${text.claims} ${claimed?.label ?? "?"} ${text.andPlays}`
     );
 
-    // Die letzte Karte wird immer aufgedeckt - auf der lässt sich nicht bluffen.
-    if (handOf(table, playerId).length === 0) {
-      const honest = claimed && card.rankId === claimed.id;
-      const face = toCardFace(context.deck, card);
-
-      if (honest) {
-        return finishGame(
-          played,
-          playerId,
-          playerName(context, playerId),
-          `${playerName(context, playerId)} ${text.wins}`
-        );
-      }
-
-      const caught = appendLog(
-        played,
-        playerName(context, playerId),
-        `${text.lied} — ${text.lastCardWas} ${face.rankLabel} ${face.suitSymbol}`
-      );
-
-      return handPileTo(caught, context, playerId);
-    }
-
     return writeExtra(
       {
         ...played,
         table: advanceTurn(played.table),
         turnNumber: played.turnNumber + 1
       },
-      { [claimKey]: readNumber(state, claimKey) + 1 }
+      { [claimKey]: readNumber(state, claimKey) + 1, [pendingWinnerKey]: handOf(table, playerId).length === 0 ? playerId : null }
     );
   },
 
@@ -313,6 +298,13 @@ export const luegenRuleset: CardRuleset = {
 
   runAction(state, context, playerId, actionId) {
     const text = words(context);
+    const pendingWinner = readText(state, pendingWinnerKey);
+
+    if (actionId === "accept") {
+      return pendingWinner && isActive(state, playerId)
+        ? finishGame(clearError(state), pendingWinner, playerName(context, pendingWinner), `${playerName(context, pendingWinner)} ${text.wins}`)
+        : state;
+    }
 
     if (actionId !== "doubt") {
       return state;
@@ -348,11 +340,14 @@ export const luegenRuleset: CardRuleset = {
       `${text.lastCardWas} ${face ? `${face.rankLabel} ${face.suitSymbol}` : "?"} — ${playerName(context, lastPlayerId)} ${lied ? text.lied : text.told}`
     );
 
-    return appendLog(
+    const resolved = appendLog(
       handPileTo(revealed, context, loser),
       playerName(context, loser),
       text.takesPile as string
     );
+    return pendingWinner && !lied
+      ? finishGame(resolved, pendingWinner, playerName(context, pendingWinner), `${playerName(context, pendingWinner)} ${text.wins}`)
+      : resolved;
   },
 
   controllerActions(state, context, playerId): CardTableActionState[] {
@@ -360,6 +355,12 @@ export const luegenRuleset: CardRuleset = {
     const playing = state.phase === "playing" && !state.gameOver;
 
     return [
+      ...(readText(state, pendingWinnerKey) ? [{
+        id: "accept",
+        label: text.accept as string,
+        kind: "primary" as const,
+        enabled: playing && isActive(state, playerId)
+      }] : []),
       {
         id: "doubt",
         label: text.doubt as string,
@@ -416,6 +417,8 @@ export const luegenRuleset: CardRuleset = {
   privateNote(state, context, playerId) {
     const text = words(context);
 
+    if (readText(state, pendingWinnerKey)) return text.pending as string;
+
     if (isActive(state, playerId)) {
       const claimed = claimRank(state, context);
       return `${text.yourTurn}: ${claimed?.label ?? "?"}`;
@@ -457,6 +460,13 @@ export const luegenRuleset: CardRuleset = {
   botMove(state, context, playerId) {
     const ranks = claimRanks(context);
     const hand = handOf(state.table, playerId);
+
+    if (readText(state, pendingWinnerKey) && isActive(state, playerId)) {
+      const claimedIndex = (readNumber(state, claimKey) - 1 + ranks.length) % Math.max(1, ranks.length);
+      const rank = ranks[claimedIndex];
+      const own = hand.filter((id) => state.table.cards[id]?.rankId === rank?.id).length;
+      return { kind: "action", actionId: own >= 3 || stableChance(`${readText(state, lastCardKey)}|${playerId}|final`, 0.5) ? "doubt" : "accept" };
+    }
 
     if (isActive(state, playerId)) {
       const claimed = claimRank(state, context);
