@@ -71,7 +71,7 @@ export const cardTableManifest = {
           {
             id: "stichwette",
             label: "Stichwette",
-            description: "Stiche ansagen und genau treffen. Eigenes Blatt mit Kronen und Federn, steigende Kartenzahl je Runde."
+            description: "Stiche ansagen und genau treffen. Eigenes Blatt mit Zauberern und Narren, steigende Kartenzahl je Runde."
           },
           {
             id: "zahlenreihe",

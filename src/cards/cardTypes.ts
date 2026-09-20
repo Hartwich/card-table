@@ -79,6 +79,7 @@ export interface CardFace {
   rankLabel: string;
   color: CardColor;
   /** Text in der Kartenmitte, z. B. "JOKER". */
+  art?: "arcane";
   centerLabel?: string;
   points?: number;
 }

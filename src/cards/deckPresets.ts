@@ -206,35 +206,43 @@ const numberRanks: CardRankDefinition[] = Array.from({ length: 20 }, (_, index) 
 /** Sticht jede andere Karte. */
 export const crownRank: CardRankDefinition = {
   id: "crown",
-  label: "♛",
+  label: "Z",
   order: 100,
-  centerLabel: "KRONE",
-  symbol: "♛",
+  centerLabel: "ZAUBERER",
+  symbol: "✦",
   color: "yellow"
 };
 
 /** Verliert jeden Stich. */
 export const featherRank: CardRankDefinition = {
   id: "feather",
-  label: "❦",
+  label: "N",
   order: 0,
-  centerLabel: "FEDER",
-  symbol: "❦",
+  centerLabel: "NARR",
+  symbol: "☾",
   color: "green"
 };
 
 /** Stichwette-Blatt: 52 Karten plus vier Kronen und vier Federn. */
+const arcaneSuits: CardSuitDefinition[] = [
+  { id: "hearts", label: "Flamme", symbol: "✹", color: "red" },
+  { id: "diamonds", label: "Stern", symbol: "✧", color: "yellow" },
+  { id: "clubs", label: "Hain", symbol: "❧", color: "green" },
+  { id: "spades", label: "Mond", symbol: "☽", color: "blue" }
+];
+const arcaneRanks = frenchRanks.map((rank, index) => ({ ...rank, label: String(index + 1), order: index + 1 }));
+
 export const trickBet60Deck: DeckDefinition = {
   id: "stichwette-60",
   label: "Stichwette-Blatt (60)",
-  suits: frenchSuits,
-  ranks: [...frenchRanks, crownRank, featherRank],
+  suits: arcaneSuits,
+  ranks: [...arcaneRanks, crownRank, featherRank],
   cards: [
-    ...buildFullDeck(frenchSuits, frenchRanks),
+    ...buildFullDeck(arcaneSuits, arcaneRanks),
     { id: "crown", suitId: null, rankId: "crown", copies: 4, tags: ["crown"] },
     { id: "feather", suitId: null, rankId: "feather", copies: 4, tags: ["feather"] }
   ],
-  backStyle: "classic"
+  backStyle: "diamond"
 };
 
 /** Vier Farbreihen von 1 bis 20 für Anlegespiele. */

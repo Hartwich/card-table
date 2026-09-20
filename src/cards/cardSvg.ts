@@ -145,7 +145,20 @@ export function renderCardFaceSvg(face: CardFace, options: CardSvgOptions = {}):
   const border = options.selected ? "#6e8b74" : "#ded5c7";
   const borderWidth = options.selected ? width * 0.03 : width * 0.012;
   const body =
-    style === "modern"
+    face.art === "arcane" && style !== "clear"
+      ? `<g transform="scale(${width / 100} ${height / 140})">
+          <rect x="5" y="5" width="90" height="130" rx="5" fill="${ink}" />
+          <path d="M50 25 80 70 50 115 20 70Z" fill="none" stroke="#ead5a0" stroke-width="1" />
+          <circle cx="50" cy="70" r="27" fill="#fffbf4" stroke="#ead5a0" stroke-width="2" />
+          <circle cx="50" cy="70" r="33" fill="none" stroke="#ead5a0" stroke-dasharray="1 5" />
+          <text x="50" y="82" text-anchor="middle" fill="${ink}" font-size="${face.centerLabel ? 36 : 32}" font-family="${serifStack}" font-weight="700">${escapeXml(face.centerLabel ? face.suitSymbol : face.rankLabel)}</text>
+          <text x="50" y="25" text-anchor="middle" fill="#fffbf4" font-size="16">${escapeXml(face.suitSymbol)}</text>
+          <text x="50" y="124" text-anchor="middle" fill="#fffbf4" font-size="${face.centerLabel ? 9 : 17}" font-family="${sansStack}">${escapeXml(face.centerLabel ?? face.suitSymbol)}</text>
+          <text x="11" y="23" fill="#fffbf4" font-size="16" font-weight="700">${escapeXml(face.rankLabel)}</text>
+          <text x="11" y="38" fill="#fffbf4" font-size="13">${escapeXml(face.suitSymbol)}</text>
+          <g transform="rotate(180 50 70)"><text x="11" y="23" fill="#fffbf4" font-size="16" font-weight="700">${escapeXml(face.rankLabel)}</text><text x="11" y="38" fill="#fffbf4" font-size="13">${escapeXml(face.suitSymbol)}</text></g>
+        </g>`
+      : style === "modern"
       ? modernBody(face, ink, width, height)
       : style === "clear"
         ? clearBody(face, ink, width, height)

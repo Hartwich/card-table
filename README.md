@@ -10,7 +10,7 @@ Handy und austauschbare Regelwerke.
 | --- | --- | --- |
 | **Mau-Mau** | Farbe oder Wert bedienen. 7 zieht zwei (stapelbar), 8 setzt aus, 9 dreht die Richtung (zu zweit: aussetzen), Bube wünscht sich eine Farbe. | Ablagestapel, Zusatzbedingung, Auswahl beim Legen |
 | **Schwimmen (31)** | Drei Handkarten, drei offene Tischkarten. Einzeln oder alle tauschen, schieben, klopfen. Drei Leben, 31 ist Feuer. | Offene Tischzone, Auswahl des Tauschziels, mehrere Geber pro Runde |
-| **Stichwette** | Erst Stiche ansagen, dann spielen. Kronen stechen alles, Federn verlieren immer. Runde 1 hat eine Karte, Runde 2 zwei, und so weiter. | Zwei Phasen, Stich als eigene Zone, echte Punktewertung |
+| **Stichwette** | Erst Stiche ansagen, dann spielen. Zauberer stechen alles, Narren verlieren immer. Runde 1 hat eine Karte, Runde 2 zwei, und so weiter. | Zwei Phasen, Stich als eigene Zone, echte Punktewertung |
 | **Zahlenreihe** | Vier Farbreihen von 1 bis 20, jede eröffnet mit der Elf. Pro Zug so viele Karten anlegen, wie passen und gewollt sind. | Mehrere Ablagereihen statt eines Stapels, mehrteiliger Zug, eigenes Deck |
 | **Lügen** | Karten verdeckt auf den Stapel legen und den Wert ansagen — auch falsch. Wer zweifelt und danebenliegt, nimmt den ganzen Stapel. | Verdeckte Zone, Ansage als Zustand, Aktionen für Nicht-Aktive |
 | **Schwarzer Peter** | Paare ablegen, beim Nachbarn blind eine Karte ziehen. Wer am Ende die einzelne Karte hält, verliert. | Automatisches Ablegen, blindes Ziehen aus fremder Hand, eigenes Deck |
@@ -75,7 +75,7 @@ Jedes Regelwerk bringt seine eigene Taktik mit:
 | --- | --- |
 | Mau-Mau | Sonderkarten sind Munition: 7 und 8 kommen, sobald jemand kurz vor dem Sieg steht. Der Bube bleibt bis zuletzt liegen, gewünscht wird die längste Farbe der Resthand. |
 | Schwimmen | Rechnet jeden Einzeltausch und den Komplettausch durch und nimmt den besten. Ab 27 Punkten wird geklopft, darunter geschoben. |
-| Stichwette | Schätzt die Hand für die Ansage (Kronen sicher, hohe Trümpfe fast). Danach zählt nur die Differenz: Wer Stiche braucht, gewinnt so billig wie möglich; wer genug hat, wirft hoch ab. |
+| Stichwette | Schätzt die Hand für die Ansage (Zauberer sicher, hohe Trümpfe fast). Danach zählt nur die Differenz: Wer Stiche braucht, gewinnt so billig wie möglich; wer genug hat, wirft hoch ab. |
 | Zahlenreihe | Legt so lange, wie etwas passt, und beginnt mit den Karten, die direkt an ein Reihenende anschließen. |
 | Lügen | Ehrlich, solange die geforderte Karte da ist; sonst Bluff mit der Karte, die am längsten nicht gefragt ist. Gezweifelt wird, wenn der Bot den angesagten Wert selbst häuft - und lieber bei kleinem Stapel. |
 | Schwarzer Peter | Reines Glück, hier gibt es nichts zu entscheiden: Der Bot zieht. |
@@ -124,7 +124,7 @@ Kartenspiele dieselbe Oberfläche verwenden können.
 | Deutsches Blatt / Skat | 32 | ja |
 | Party-Deck (frei definiertes Beispiel) | 40 | ja |
 | Doppeldeck + 4 Joker | 108 | ja |
-| Stichwette-Blatt (52 + 4 Kronen + 4 Federn) | 60 | fest für Stichwette |
+| Stichwette-Blatt (52 + 4 Zauberer + 4 Narren) | 60 | fest für Stichwette |
 | Zahlenblatt 1-20 | 80 | fest für Zahlenreihe |
 | Peter-Blatt (Französisch ohne Damen + 1 Peter) | 49 | fest für Schwarzer Peter |
 | Doppelkopf-Blatt (9 bis Ass, jede Karte doppelt) | 48 | fest für Doppelkopf |
@@ -139,8 +139,8 @@ Dazu drei Kartenbilder, die Host und Handy gemeinsam nutzen:
 Ein eigenes Deck entsteht mit `createCustomDeck({ id, label, suits, ranks })`.
 Farben, Symbole, Rangfolge und Punktwerte sind frei wählbar; Kartenbild und
 Rückseite werden daraus automatisch gerendert. Ränge dürfen für farblose Karten
-ein eigenes Symbol, eine Farbe und einen Mitteltext tragen — so entstehen Krone,
-Feder und Peter ohne Sonderfall in der Engine. Über `copies` je Karte entsteht
+ein eigenes Symbol, eine Farbe und einen Mitteltext tragen — so entstehen Zauberer,
+Narr und Peter ohne Sonderfall in der Engine. Über `copies` je Karte entsteht
 ein Blatt mit Mehrfachkarten wie beim Doppelkopf.
 
 ## Ein neues Kartenspiel bauen
@@ -244,13 +244,13 @@ neue Karte. Schwimmen erkennt auch ausgeteilte 31. Herzeln erhält bei ungleiche
 Teilung alle Strafkarten und begrenzt Strafabwürfe im ersten Stich. Bei Lügen
 bleibt die letzte Karte anfechtbar; der nächste Spieler kann sie akzeptieren.
 Fischen beendet auch das letzte gezogene Quartett und wertet Gleichstände.
-Schwimmen und Zahlenreihe bleiben die im Regeltext beschriebenen Varianten.
+Schwimmen bleibt die im Regeltext beschriebenen Varianten.
 
 - Keine Ansagepflicht bei "Mau" — die letzte Karte wird nur angezeigt.
-- Außer Stichwette, Herzeln und Doppelkopf geben alle Regelwerke nur einen Punkt
+- Außer Stichwette, Zahlenreihe, Herzeln und Doppelkopf geben alle Regelwerke nur einen Punkt
   für den Rundensieg.
 - Schwimmen wechselt den Geber nicht, es beginnt immer der erste Sitzplatz.
-- Bei einer Krone als Trumpfkarte wählt der Geber der Stichwette die Trumpffarbe
+- Bei einem Zauberer als Trumpfkarte wählt der Geber der Stichwette die Trumpffarbe
   am Handy vor den Ansagen.
 - Doppelkopf bietet Ansagen, Soli und mit beiden Kreuz-Damen direkt beim
   Vorbehalt stille Hochzeit, erster Fehl oder erster Trumpf geht mit. Die stille
@@ -274,3 +274,6 @@ Schwimmen und Zahlenreihe bleiben die im Regeltext beschriebenen Varianten.
 
 Alle Kartenbilder werden im Code als SVG erzeugt. Es werden keine externen
 Assets ausgeliefert.
+
+Stichwette verwendet ein eigenes magisches Zahlenblatt (1–13, vier Farben, je vier Zauberer und Narren). Geber und Startspieler wechseln; nach dem vollständigen Austeilen endet die Serie, Bereit beginnt wieder bei einer Karte und null Serienpunkten.
+Zahlenreihe verteilt 20/20/15/12/10 Karten bei 2/3/4/5/6 Spielern, startet mit der ersten vorhandenen Elf in Rot/Gelb/Grün/Blau und zieht bei fehlender Anlegemöglichkeit höchstens drei Karten einzeln. Eine passende gezogene Karte beendet nach dem Anlegen den Zug. Restliche Handwerte zählen negativ.

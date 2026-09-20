@@ -60,7 +60,7 @@ const crownLead = "*";
 
 const copy: Record<SupportedLanguage, Record<string, string>> = {
   de: {
-    intro: "Stichwette: Erst Stiche ansagen, dann spielen. Die Krone sticht alles, die Feder nichts.",
+    intro: "Stichwette: Erst Stiche ansagen, dann spielen. Der Zauberer sticht alles, der Narr nichts.",
     bidPrompt: "Sag deine Stiche an.",
     bidLabel: "Ansage",
     tricks: "Stiche",
@@ -85,7 +85,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     chooseTrump: "Wähle die Trumpffarbe."
   },
   en: {
-    intro: "Trick Bets: bid your tricks first, then play. A crown beats everything, a feather nothing.",
+    intro: "Trick Bets: bid your tricks first, then play. A wizard beats everything, a fool nothing.",
     bidPrompt: "Bid your tricks.",
     bidLabel: "Bid",
     tricks: "Tricks",
@@ -208,10 +208,18 @@ function finishDeal(state: CardGameState, context: CardRulesetContext): CardGame
     }
   }
 
+  const complete = state.handSize >= Math.floor(deckSize / state.table.turnOrder.length);
+  const scores = trickBetRuleset.buildScore(state);
+  const ranked = scores.map(entry => ({ id: entry.playerId, points: entry.delta + (complete ? state.gameScores[entry.playerId] ?? 0 : 0) }));
+  const highest = Math.max(...ranked.map(entry => entry.points));
+  const winners = ranked.filter(entry => entry.points === highest).map(entry => entry.id);
+  bestPlayerId = winners.length === 1 ? winners[0]! : null;
+  const names = winners.map(id => playerName(context, id)).join(" & ");
+  next = writeExtra(next, { seriesComplete: complete, scoreBreakdown: JSON.stringify(complete ? [context.language === "en" ? `Series complete. Winner: ${names}. Ready starts a new series with one card and zero points.` : `Serie beendet. Gewonnen: ${names}. Bereit startet eine neue Serie mit einer Karte und null Punkten.`] : []) });
   return finishGame(
     next,
     bestPlayerId,
-    bestPlayerId ? playerName(context, bestPlayerId) : null,
+    names,
     bestPlayerId ? `${playerName(context, bestPlayerId)} ${text.wins}` : (text.roundOver as string)
   );
 }
@@ -232,6 +240,8 @@ export const trickBetRuleset: CardRuleset = {
   },
 
   setupRound(state, context) {
+    const leaderIndex = ((context.roundNumber ?? 1) - 1) % state.table.turnOrder.length;
+    const dealerIndex = (leaderIndex + state.table.turnOrder.length - 1) % state.table.turnOrder.length;
     const trumpCardId = state.table.drawPile[0] ?? null;
     const trumpCard = trumpCardId ? state.table.cards[trumpCardId] : null;
     let trumpSuitId: string | null = null;
@@ -244,7 +254,8 @@ export const trickBetRuleset: CardRuleset = {
       [phaseKey]: trumpCard && isCrownCard(trumpCard) ? "trump-choice" : "bid",
       [trumpKey]: trumpSuitId,
       [leadKey]: noLead,
-      [trickLeaderKey]: 0,
+      [trickLeaderKey]: leaderIndex,
+      firstPlayerIndex: leaderIndex,
       [trickCountKey]: 0,
       [dealSizeKey]: state.handSize
     };
@@ -259,7 +270,7 @@ export const trickBetRuleset: CardRuleset = {
       table: {
         ...state.table,
         drawPile: trumpCardId ? state.table.drawPile.slice(1) : state.table.drawPile,
-        activeIndex: trumpCard && isCrownCard(trumpCard) ? state.table.turnOrder.length - 1 : 0,
+        activeIndex: trumpCard && isCrownCard(trumpCard) ? dealerIndex : leaderIndex,
         zones: {
           ...state.table.zones,
           [trickZoneId]: [],
@@ -287,16 +298,16 @@ export const trickBetRuleset: CardRuleset = {
           {
             title: "The deck",
             lines: [
-              "52 cards in four suits, plus four crowns and four feathers.",
-              "A crown beats every other card. A feather always loses."
+              "Cards numbered 1–13 in four suits, plus four wizards and four fools.",
+              "A wizard beats every other card. A fool always loses."
             ]
           },
           {
             title: "A deal",
             lines: [
-              "Round 1 deals one card each, round 2 two, and so on.",
+              "Round 1 deals one card each, round 2 two, and so on. The dealer rotates clockwise; the player to their left bids and leads first.",
               "One card of the remaining pile is turned over: its suit is trump. With no cards remaining, there is no trump.",
-              "A feather means no trump; for a crown the dealer (last seat) chooses the trump suit before bidding."
+              "A fool means no trump; for a wizard the dealer chooses the trump suit before bidding."
             ]
           },
           {
@@ -310,18 +321,18 @@ export const trickBetRuleset: CardRuleset = {
             title: "Playing a trick",
             lines: [
               "The leader plays any card. Everyone else must follow the suit that was led if they hold it.",
-              "Crowns and feathers may always be played, whatever you hold.",
-              "If a feather leads, the first suited card after it sets the suit to follow.",
-              "If a crown leads, nobody has to follow anything."
+              "Wizards and fools may always be played, whatever you hold.",
+              "If a fool leads, the first suited card after it sets the suit to follow.",
+              "If a wizard leads, nobody has to follow anything."
             ]
           },
           {
             title: "Who wins the trick",
             lines: [
-              "The first crown played wins immediately.",
+              "The first wizard played wins immediately.",
               "Otherwise the highest trump wins.",
               "Without a trump, the highest card of the suit led wins.",
-              "Feathers never win — unless everybody plays one, then the first feather takes it.",
+              "Fools never win — unless everybody plays one, then the first fool takes it.",
               "The winner leads the next trick."
             ]
           },
@@ -330,7 +341,7 @@ export const trickBetRuleset: CardRuleset = {
             lines: [
               "Bid matched: 20 points plus 10 per trick taken.",
               "Bid missed: 10 points off for every trick of difference.",
-              "The deal ends after the last card; points carry on in the scoreboard."
+              "Points carry across deals. After 20/15/12/10 deals with 3/4/5/6 players, the highest total wins. Ready then starts a new series."
             ]
           }
         ]
@@ -345,16 +356,16 @@ export const trickBetRuleset: CardRuleset = {
           {
             title: "Das Blatt",
             lines: [
-              "52 Karten in vier Farben, dazu vier Kronen und vier Federn.",
-              "Die Krone sticht jede andere Karte. Die Feder verliert immer."
+              "Zahlenkarten 1–13 in vier Farben, dazu vier Zauberer und vier Narren.",
+              "Der Zauberer sticht jede andere Karte. Der Narr verliert immer."
             ]
           },
           {
             title: "Der Durchgang",
             lines: [
-              "In Runde 1 bekommt jeder eine Karte, in Runde 2 zwei, und so weiter.",
+              "In Runde 1 bekommt jeder eine Karte, in Runde 2 zwei, und so weiter. Der Geber wechselt im Uhrzeigersinn; links von ihm beginnen Ansagen und Ausspielen.",
               "Eine Karte des Reststapels wird aufgedeckt: ihre Farbe ist Trumpf. Ohne Reststapel gibt es keinen Trumpf.",
-              "Liegt dort eine Feder, gibt es keinen Trumpf; bei einer Krone wählt der Geber (letzter Sitz) vor den Ansagen die Trumpffarbe."
+              "Liegt dort ein Narr, gibt es keinen Trumpf; bei einem Zauberer wählt der Geber vor den Ansagen die Trumpffarbe."
             ]
           },
           {
@@ -368,18 +379,18 @@ export const trickBetRuleset: CardRuleset = {
             title: "Einen Stich spielen",
             lines: [
               "Wer eröffnet, legt eine beliebige Karte. Alle anderen müssen die angespielte Farbe bedienen, wenn sie sie haben.",
-              "Krone und Feder dürfen immer gelegt werden, egal was du sonst auf der Hand hast.",
-              "Eröffnet eine Feder, bestimmt die erste Farbkarte danach, was bedient werden muss.",
-              "Eröffnet eine Krone, muss niemand bedienen."
+              "Zauberer und Narr dürfen immer gelegt werden, egal was du sonst auf der Hand hast.",
+              "Eröffnet ein Narr, bestimmt die erste Farbkarte danach, was bedient werden muss.",
+              "Eröffnet ein Zauberer, muss niemand bedienen."
             ]
           },
           {
             title: "Wer den Stich gewinnt",
             lines: [
-              "Die zuerst gelegte Krone gewinnt sofort.",
+              "Der zuerst gelegte Zauberer gewinnt sofort.",
               "Sonst gewinnt der höchste Trumpf.",
               "Ohne Trumpf gewinnt die höchste Karte der angespielten Farbe.",
-              "Federn gewinnen nie — nur wenn alle eine legen, bekommt die erste Feder den Stich.",
+              "Narren gewinnen nie — nur wenn alle eine legen, bekommt der erste Narr den Stich.",
               "Wer den Stich holt, eröffnet den nächsten."
             ]
           },
@@ -388,7 +399,7 @@ export const trickBetRuleset: CardRuleset = {
             lines: [
               "Ansage getroffen: 20 Punkte plus 10 je geholtem Stich.",
               "Ansage verfehlt: 10 Minuspunkte je Stich Abweichung.",
-              "Nach der letzten Karte ist der Durchgang vorbei; die Punkte laufen im Scoreboard weiter."
+              "Punkte zählen über die Durchgänge. Nach 20/15/12/10 Durchgängen bei 3/4/5/6 Spielern gewinnt die höchste Summe. Bereit startet danach eine neue Serie."
             ]
           }
         ];
@@ -528,7 +539,7 @@ export const trickBetRuleset: CardRuleset = {
     if (readText(state, phaseKey) === "trump-choice") {
       const suit = context.deck.suits.find((entry) => actionId === `trump:${entry.id}`);
       if (!isActive(state, playerId) || !suit) return state;
-      return clearError(writeExtra({ ...state, table: { ...state.table, activeIndex: 0 }, updatedAt: context.now },
+      return clearError(writeExtra({ ...state, table: { ...state.table, activeIndex: readNumber(state, "firstPlayerIndex") }, updatedAt: context.now },
         { [trumpKey]: suit.id, [phaseKey]: "bid" }));
     }
 
@@ -563,11 +574,11 @@ export const trickBetRuleset: CardRuleset = {
       return writeExtra(
         {
           ...next,
-          table: { ...next.table, activeIndex: 0 },
+          table: { ...next.table, activeIndex: readNumber(state, "firstPlayerIndex") },
           message: text.intro as string,
           updatedAt: context.now
         },
-        { [phaseKey]: "play", [trickLeaderKey]: 0 }
+        { [phaseKey]: "play", [trickLeaderKey]: readNumber(state, "firstPlayerIndex") }
       );
     }
 
@@ -909,7 +920,7 @@ function estimateTricks(
     if (trump) {
       strength += order >= 12 ? 0.9 : order >= 10 ? 0.55 : 0.25;
     } else {
-      strength += order >= 14 ? 0.75 : order === 13 ? 0.4 : 0.08;
+      strength += order >= 13 ? 0.75 : order === 12 ? 0.4 : 0.08;
     }
   }
 

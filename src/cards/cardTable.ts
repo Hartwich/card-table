@@ -315,6 +315,7 @@ export function toCardFace(deck: DeckDefinition, card: CardInstance): CardFace {
     suitLabel: suit?.label ?? rank?.centerLabel ?? "Joker",
     rankLabel: rank?.label ?? card.rankId.toUpperCase(),
     color: suit?.color ?? rank?.color ?? "neutral",
+    art: deck.id === "stichwette-60" ? "arcane" : undefined,
     centerLabel: rank?.centerLabel ?? (isJoker ? "JOKER" : undefined),
     points: rank?.points
   };

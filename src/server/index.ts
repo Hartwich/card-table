@@ -210,7 +210,7 @@ function buildRulesetContext(state: CardGameState, context: ServerGameContext): 
 function createRuntimeState(context: ServerGameContext): CardGameState {
   const ruleset = resolveRuleset(context);
   const previous = context.previousRound?.state as Partial<CardGameState> | undefined;
-  const seriesRound = previous?.rulesetId === ruleset.id
+  const seriesRound = previous?.rulesetId === ruleset.id && !previous.extra?.seriesComplete
     ? Number(previous.extra?.seriesRound ?? 1) + 1
     : 1;
   context = { ...context, roundNumber: seriesRound };
@@ -218,7 +218,7 @@ function createRuntimeState(context: ServerGameContext): CardGameState {
   const bots = resolveBotSeats(context, ruleset);
   const botScores = carryBotScores(context, bots);
   const previousCandidate = context.previousRound?.state as Partial<CardGameState> | undefined;
-  const previousState = previousCandidate?.rulesetId === ruleset.id ? previousCandidate : undefined;
+  const previousState = previousCandidate?.rulesetId === ruleset.id && !previousCandidate.extra?.seriesComplete ? previousCandidate : undefined;
   const gameScores = previousState?.gameScores && typeof previousState.gameScores === "object"
     ? { ...previousState.gameScores }
     : {};

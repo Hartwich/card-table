@@ -41,6 +41,7 @@ export function cardFaceHtml(
         suitLabel: card.suitLabel,
         rankLabel: card.rankLabel,
         color: card.color,
+        art: card.art,
         centerLabel: card.centerLabel
       },
       { width: 200, height: 280, style }
