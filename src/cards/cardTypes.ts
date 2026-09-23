@@ -82,6 +82,8 @@ export interface CardFace {
   art?: "arcane";
   centerLabel?: string;
   points?: number;
+  /** Bildsymbole auf einer Symboljagd-Karte. */
+  symbols?: string[];
 }
 
 export const cardColorPalette: Record<CardColor, { ink: string; accent: string }> = {

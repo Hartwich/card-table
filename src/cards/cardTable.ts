@@ -317,7 +317,8 @@ export function toCardFace(deck: DeckDefinition, card: CardInstance): CardFace {
     color: suit?.color ?? rank?.color ?? "neutral",
     art: deck.id === "stichwette-60" ? "arcane" : undefined,
     centerLabel: rank?.centerLabel ?? (isJoker ? "JOKER" : undefined),
-    points: rank?.points
+    points: rank?.points,
+    symbols: card.tags.filter((tag) => tag.startsWith("sym:")).map((tag) => tag.slice(4))
   };
 }
 

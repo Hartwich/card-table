@@ -168,6 +168,14 @@ export const french104Deck: DeckDefinition = extendDeck(french52Deck, {
   label: "Doppeldeck + 4 Joker (108)"
 });
 
+/** Romméblatt: zwei französische Pakete und vier Joker. */
+export const romme108Deck = extendDeck(french52Deck, {
+  deckCount: 2,
+  jokerCount: 4,
+  id: "romme-108",
+  label: "Romméblatt (108)"
+});
+
 export const skat32Deck: DeckDefinition = {
   id: "skat-32",
   label: "Deutsches Blatt (32)",
@@ -254,6 +262,34 @@ export const numbers80Deck: DeckDefinition = createCustomDeck({
   backStyle: "grid"
 });
 
+/** 57 unterschiedliche Bildmotive für Symboljagd. */
+export const symboljagdSymbols = [
+  "fox", "owl", "key", "moon", "sun", "cactus", "dragon", "apple", "mushroom", "anchor", "teapot", "crown", "feather", "fish", "carrot", "ghost", "spider", "butterfly", "snowflake", "lightning", "heart", "clover", "candle", "hourglass", "compass", "telescope", "glasses", "hammer", "violin", "wand", "potion", "crystal", "balloon", "paper-boat", "turtle", "cat", "dog", "bee", "ladybug", "orange", "cheese", "ice-cream", "top-hat", "ring", "bell", "umbrella", "sailboat", "lighthouse", "diamond", "pearl", "shell", "planet", "shooting-star", "phoenix-feather", "castle", "frog", "blue-flame"
+] as const;
+
+const symboljagdSuits: CardSuitDefinition[] = [{ id: "symbols", symbol: "✦", label: "Symbole", color: "neutral" }];
+const symboljagdRanks: CardRankDefinition[] = Array.from({ length: 57 }, (_, i) => ({ id: `card-${i + 1}`, label: "✦", order: i + 1 }));
+const mod7 = (value: number) => ((value % 7) + 7) % 7;
+const point = (x: number, y: number) => String(x * 7 + y);
+const slope = (n: number) => String(49 + n);
+const vertical = "56";
+const symboljagdCards: CardDefinition[] = [];
+for (let m = 0; m < 7; m++) {
+  for (let b = 0; b < 7; b++) {
+    const id = `card-${symboljagdCards.length + 1}`;
+    symboljagdCards.push({ id, suitId: "symbols", rankId: id, tags: [...Array.from({ length: 7 }, (_, x) => `sym:${point(x, mod7(m * x + b))}`), `sym:${slope(m)}`] });
+  }
+}
+for (let x = 0; x < 7; x++) {
+  const id = `card-${symboljagdCards.length + 1}`;
+  symboljagdCards.push({ id, suitId: "symbols", rankId: id, tags: [...Array.from({ length: 7 }, (_, y) => `sym:${point(x, y)}`), `sym:${vertical}`] });
+}
+const finalCardId = `card-${symboljagdCards.length + 1}`;
+symboljagdCards.push({ id: finalCardId, suitId: "symbols", rankId: finalCardId, tags: [...Array.from({ length: 7 }, (_, m) => `sym:${slope(m)}`), `sym:${vertical}`] });
+export const symboljagd57Deck: DeckDefinition = {
+  id: "symboljagd-57", label: "Symboljagd-Bildkarten (57)", suits: symboljagdSuits, ranks: symboljagdRanks, cards: symboljagdCards, backStyle: "diamond"
+};
+
 /** Die einzelne Karte ohne Partner. */
 export const peterRank: CardRankDefinition = {
   id: "peter",
@@ -335,7 +371,9 @@ export const allCardDecks: DeckDefinition[] = [
   ...cardDeckOptions.map((option) => option.deck),
   trickBet60Deck,
   numbers80Deck,
+  symboljagd57Deck,
   peter49Deck,
+  romme108Deck,
   doppelkopf48Deck,
   doppelkopf40Deck
 ];

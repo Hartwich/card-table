@@ -20,6 +20,7 @@ export interface CardTableCardState {
   art?: "arcane";
   centerLabel?: string;
   points?: number;
+  symbols?: string[];
   /**
    * Farbe des Spielers, der diese Karte gelegt hat.
    *
@@ -108,6 +109,7 @@ export interface CardTableChoiceOptionState {
   label: string;
   symbol?: string;
   color?: CardColor;
+  symbolImage?: string;
 }
 
 export interface CardTableChoiceState {

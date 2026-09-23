@@ -8,6 +8,8 @@ import { schwarzerPeterRuleset } from "./schwarzerPeter.js";
 import { schwimmenRuleset } from "./schwimmen.js";
 import { trickBetRuleset } from "./stichwette.js";
 import { numberRowsRuleset } from "./zahlenreihe.js";
+import { rommeRuleset } from "./romme.js";
+import { symboljagdRuleset } from "./symboljagd.js";
 import type { CardRuleset } from "./types.js";
 
 export * from "./types.js";
@@ -21,6 +23,8 @@ export { schwarzerPeterRuleset } from "./schwarzerPeter.js";
 export { fischenRuleset } from "./fischen.js";
 export { herzelnRuleset } from "./herzeln.js";
 export { doppelkopfRuleset } from "./doppelkopf.js";
+export { rommeRuleset } from "./romme.js";
+export { symboljagdRuleset } from "./symboljagd.js";
 
 /** Alle verfügbaren Regelwerke. Ein neues Kartenspiel wird hier eingetragen. */
 export const cardRulesets: CardRuleset[] = [
@@ -33,6 +37,8 @@ export const cardRulesets: CardRuleset[] = [
   fischenRuleset,
   herzelnRuleset,
   doppelkopfRuleset,
+  rommeRuleset,
+  symboljagdRuleset,
   freePlayRuleset
 ];
 

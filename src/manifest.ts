@@ -34,8 +34,8 @@ export const cardTableRoomSettingKeys = {
 export const cardTableManifest = {
   id: "card-table",
   displayName: "Kartentisch",
-  description:
-    "Gemeinsamer Spieltisch für zehn Kartenspiele: Mau-Mau, Schwimmen, Stichwette, Zahlenreihe, Lügen, Schwarzer Peter, Fischen, Herzeln, Doppelkopf und freies Spiel.",
+    description:
+      "Gemeinsamer Spieltisch für zwölf Kartenspiele: Mau-Mau, Schwimmen, Stichwette, Zahlenreihe, Lügen, Schwarzer Peter, Fischen, Herzeln, Doppelkopf, Rommé, Symboljagd und freies Spiel.",
   // Eine Person reicht: Fehlende Plätze füllt der Tisch mit KI-Sitzen auf.
   minPlayers: 1,
   maxPlayers: 6,
@@ -104,6 +104,16 @@ export const cardTableManifest = {
             description: "Für vier Personen: Karo, Damen, Buben und Herz-Zehn sind Trumpf, die Kreuz-Damen bilden Re."
           },
           {
+            id: "romme",
+            label: "Rommé",
+            description: "Sätze und Folgen sammeln, ab 40 Augen auslegen, anlegen und mit Jokern die Hand leeren."
+          },
+          {
+            id: "symboljagd",
+            label: "Symboljagd",
+            description: "Finde das eine gemeinsame Bildsymbol zwischen deiner obersten Karte und der Mitte. Ein falscher Tipp sperrt dich kurz.",
+          },
+          {
             id: "free-play",
             label: "Freies Spiel",
             description: "Offener Tisch ohne Regeln: jede Karte darf abgelegt werden."
@@ -160,7 +170,7 @@ export const cardTableManifest = {
         description: "Ordnet das Blatt auf dem Handy nach Trumpf und Farben statt in der Reihenfolge des Austeilens.",
         visibleWhen: {
           field: cardTableRoomSettingKeys.ruleset,
-          anyOf: ["doppelkopf", "herzeln", "stichwette"]
+          anyOf: ["doppelkopf", "herzeln", "stichwette", "romme"]
         },
         onValue: "auto",
         offValue: "dealt",

@@ -16,6 +16,8 @@ Handy und austauschbare Regelwerke.
 | **Schwarzer Peter** | Paare ablegen, beim Nachbarn blind eine Karte ziehen. Wer am Ende die einzelne Karte hält, verliert. | Automatisches Ablegen, blindes Ziehen aus fremder Hand, eigenes Deck |
 | **Fischen** | Einen Mitspieler nach einem Wert fragen. Vier gleiche wandern als Satz auf den Tisch, sonst wird gefischt. | Auswahl eines Mitspielers, Auslagen als eigene Zonen |
 | **Herzeln** | Stiche vermeiden: jedes Herz zählt 1, die Pik-Dame 13. Farbe bedienen, Herz erst nach dem Bruch. Alle Strafpunkte auf einmal drehen die Wertung um. | Bedienzwang, negative Wertung, Sonderregel über die ganze Runde |
+| **Rommé** | Zwei Doppelblätter plus vier Joker. 13 Karten, 40 Augen zur Erstauslage, danach Kombinationen erweitern und die letzte Handkarte abwerfen. | Satz- und Folgenprüfung, verdeckte Hand und gemeinsame Auslagen, Serienwertung |
+| **Symboljagd** | Vergleiche die oberste eigene Karte mit der Mitte: Genau ein Bild ist gleich. Tippe das passende Motiv, um deine Karte abzulegen. | 57 Bildsymbole, Echtzeitspiel, 7-Sekunden-Sperre bei Fehlklick und 2-Sekunden-Nachsicht bei nahezu gleichzeitigen Treffern |
 | **Doppelkopf** | Jede Karte doppelt. Karo, alle Damen, alle Buben und die Herz-Zehn sind Trumpf. Die Kreuz-Damen bilden Re gegen Kontra. | Verdeckte Parteien, Trumpfordnung quer zu den Farben, Wertung nach Augen, wahlweise erst am Ende ausgezählt |
 | **Freies Spiel** | Offener Tisch ohne Regeln: ziehen, ablegen, Zug von Hand weitergeben. | Vorlage für neue Regelwerke |
 
@@ -23,7 +25,7 @@ Die vollständigen Regeln jedes Spiels stehen im Regelwerk selbst und werden auf
 dem Host über den **Regeln**-Button eingeblendet — Ziel, Zugablauf, was angelegt
 werden darf, Sonderkarten und Wertung.
 
-Stichwette und Zahlenreihe sind eigenständige Umsetzungen klassischer
+Stichwette, Zahlenreihe und Rommé sind eigenständige Umsetzungen klassischer
 Spielmechaniken mit eigenen Namen, eigenen Karten und eigener Wertung.
 
 ## Status
@@ -199,7 +201,7 @@ nicht erst gezeigt.
 
 | Feld | Sichtbar bei |
 | --- | --- |
-| Regelwerk | immer — eines der zehn |
+| Regelwerk | immer — eines der zwölf |
 | Kartendeck | Mau-Mau, Schwimmen, Lügen, Fischen, Freies Spiel. Die übrigen bringen ihr eigenes Blatt mit |
 | Handkarten (3–12) | Mau-Mau, Lügen, Fischen, Freies Spiel. Schwimmen spielt immer mit drei, die Stichwette steigert selbst, der Rest teilt das ganze Blatt aus |
 | Augen zählen | nur Doppelkopf: laufend oder erst am Ende |
@@ -277,3 +279,9 @@ Assets ausgeliefert.
 
 Stichwette verwendet ein eigenes magisches Zahlenblatt (1–13, vier Farben, je vier Zauberer und Narren). Geber und Startspieler wechseln; nach dem vollständigen Austeilen endet die Serie, Bereit beginnt wieder bei einer Karte und null Serienpunkten.
 Zahlenreihe verteilt 20/20/15/12/10 Karten bei 2/3/4/5/6 Spielern, startet mit der ersten vorhandenen Elf in Rot/Gelb/Grün/Blau und zieht bei fehlender Anlegemöglichkeit höchstens drei Karten einzeln. Eine passende gezogene Karte beendet nach dem Anlegen den Zug. Restliche Handwerte zählen negativ.
+
+## Rommé
+
+The table includes a 108-card Rommé deck: two 52-card French packs and four jokers. Each player receives 13 cards; the first player gets 14 and opens the discard pile. Draw from stock or discard, select complete sets and runs from the phone, and lay 40 points to open. After opening, add melds to the shared table; finish your turn by discarding a card (a Joker only when it goes out). The first player to empty their hand receives 40 points plus opponents' deadwood, while everyone else loses their remaining card values. Rounds continue with scores carried by this ruleset.
+
+Das Romméblatt besteht aus zwei französischen Blättern und vier Jokern. Die Erstauslage muss mindestens 40 Augen in gültigen Sätzen (gleicher Rang, unterschiedliche Farben) und/oder Folgen (mindestens drei aufeinanderfolgende Karten einer Farbe) enthalten. Asse dürfen niedrig oder hoch liegen, Folgen laufen nicht um die Ecke. Ein Joker ersetzt eine fehlende Karte und kann nach der Erstauslage gegen genau diese Karte getauscht werden; der Joker kommt dann auf die Hand und darf nicht abgeworfen werden. Nach der Erstauslage können Kombinationen ausgelegt und Tischmeldungen ergänzt werden. Wer seine letzte Karte abwirft, erhält 40 Punkte plus die Restwerte der anderen; die übrigen verlieren ihre Restwerte. Sind die Stapel aufgebraucht, gewinnt der niedrigste Restwert ohne Bonus, Gleichstände teilen das Ergebnis.

@@ -425,8 +425,11 @@ function buildHand(
     sorted && ruleset.sortHand
       ? ruleset.sortHand(state, rulesetContext, playerId, hand)
       : hand;
+  const visible = typeof ruleset.controllerHandLimit === "number"
+    ? ordered.slice(0, ruleset.controllerHandLimit)
+    : ordered;
 
-  return ordered.map((cardId) => {
+  return visible.map((cardId) => {
     const card = state.table.cards[cardId];
     const face = card
       ? toCardFace(rulesetContext.deck, card)
