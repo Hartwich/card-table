@@ -273,19 +273,19 @@ export const rommeRuleset: CardRuleset = {
     if (state.gameOver || state.phase !== "playing") return [];
     const isTurn = active(state, playerId); const current = selected(state);
     if (phase(state) === "draw") return [
-      { id: "draw", label: context.language === "en" ? "Draw a card" : "Karte ziehen", kind: "primary", enabled: isTurn && state.table.drawPile.length > 0 },
-      { id: "take-discard", label: context.language === "en" ? "Take discard" : "Ablage nehmen", kind: "secondary", enabled: isTurn && state.table.discardPile.length > 0 }
+      { id: "draw", label: context.language === "en" ? "Draw from stock → hand" : "Vom Nachziehstapel → Hand", kind: "primary", enabled: isTurn && state.table.drawPile.length > 0 },
+      { id: "take-discard", label: context.language === "en" ? "Take top discard → hand" : "Oberste Ablage → Hand", kind: "secondary", enabled: isTurn && state.table.discardPile.length > 0 }
     ];
     const cards = handOf(state.table, playerId).map(id => ({ id: `select:${id}`, label: `${current.includes(id) ? "✓ " : ""}${toCardFace(context.deck, state.table.cards[id]!).rankLabel} ${toCardFace(context.deck, state.table.cards[id]!).suitSymbol}`, kind: "secondary" as const, enabled: isTurn }));
-    if (phase(state) === "discard" || phase(state) === "opening-discard") return [...cards, { id: "discard-selected", label: phase(state) === "opening-discard" ? (context.language === "en" ? "Open discard pile" : "Ablagestapel eröffnen") : (context.language === "en" ? "Discard selected card" : "Ausgewählte Karte abwerfen"), kind: "primary", enabled: isTurn && current.length === 1 && (state.table.cards[current[0]!]?.rankId !== "joker" || handOf(state.table, playerId).length === 1) }];
+    if (phase(state) === "discard" || phase(state) === "opening-discard") return [...cards, { id: "discard-selected", label: phase(state) === "opening-discard" ? (context.language === "en" ? "Selected card → discard pile (start)" : "Ausgewählte Karte → Ablage eröffnen") : (context.language === "en" ? "Selected card → discard pile" : "Ausgewählte Karte → Ablagestapel"), kind: "primary", enabled: isTurn && current.length === 1 && (state.table.cards[current[0]!]?.rankId !== "joker" || handOf(state.table, playerId).length === 1) }];
     return [...cards,
-      { id: "lay-selected", label: context.language === "en" ? "Lay selected melds" : "Auswahl auslegen", kind: "primary", enabled: isTurn && current.length >= 3 },
-      { id: "finish-meld", label: context.language === "en" ? "Done melding" : "Fertig auslegen", kind: "secondary", enabled: isTurn },
+      { id: "lay-selected", label: context.language === "en" ? "Lay melds → table center" : "Kombination(en) → Tischmitte", kind: "primary", enabled: isTurn && current.length >= 3 },
+      { id: "finish-meld", label: context.language === "en" ? "Finish laying → discard a card" : "Auslegen beenden → Karte abwerfen", kind: "secondary", enabled: isTurn },
       ...allMelds(state).flatMap((zoneId, index) => {
         const canReplace = current.length === 1 && jokerTargets(state.table.zones[zoneId] ?? [], state, context).some(item => item.suitId === state.table.cards[current[0]!]?.suitId && item.rankId === state.table.cards[current[0]!]?.rankId);
         return [
-          { id: `add:${index}`, label: context.language === "en" ? `Add to meld ${index + 1}` : `An Auslage ${index + 1} anlegen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) && current.length > 0 },
-          ...(canReplace ? [{ id: `replace:${index}`, label: context.language === "en" ? `Replace Joker in meld ${index + 1}` : `Joker in Auslage ${index + 1} tauschen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) }] : [])
+          { id: `add:${index}`, label: context.language === "en" ? `Add to table meld ${index + 1}` : `An Tisch-Auslage ${index + 1} anlegen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) && current.length > 0 },
+          ...(canReplace ? [{ id: `replace:${index}`, label: context.language === "en" ? `Replace Joker in table meld ${index + 1}` : `Joker in Tisch-Auslage ${index + 1} tauschen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) }] : [])
         ];
       })
     ];

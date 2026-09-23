@@ -25,6 +25,8 @@ type SupportedLanguage = "de" | "en";
  */
 interface CardHandLayoutModel {
   kind: "card_hand";
+  isSymboljagd?: boolean;
+  isRomme?: boolean;
   title: string;
   subtitle: string;
   helperText: string;
@@ -68,6 +70,7 @@ interface ControllerGameRenderContext {
       id: string;
     } | null;
     game?: {
+      rulesetId?: string;
       phase?: string;
       roundNumber?: number;
       message?: string;
@@ -90,6 +93,8 @@ export function buildCardTableControllerModel(
 
   return {
     kind: "card_hand",
+    isRomme: gameState.rulesetId === "romme",
+    isSymboljagd: gameState.rulesetId === "symboljagd",
     title: gameState.title ?? (en ? "Card table" : "Kartentisch"),
     subtitle: gameState.gameOver
       ? gameState.winnerName

@@ -130,6 +130,8 @@ export function renderCardTableHtml(
     : state.stacks.filter((stack) => !stack.onDemand);
   const cardWidth = state.rulesetId === "doppelkopf"
     ? Math.min(220, cardWidthFor(stacks) + 34)
+    : state.rulesetId === "symboljagd"
+      ? Math.min(290, cardWidthFor(stacks) + 80)
     : cardWidthFor(stacks);
   const condition = state.conditionLabel
     ? `<span class="ct-chip">${escapeHtml(`${state.conditionSymbol ?? ""} ${state.conditionLabel}`.trim())}</span>`

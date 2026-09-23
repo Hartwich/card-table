@@ -63,16 +63,16 @@ export const symboljagdRuleset: CardRuleset = {
   },
   introMessage(context) {
     return context.language === "en"
-      ? "Spot the one matching picture on your top card and the center card. Tap your card, then choose the matching picture."
-      : "Finde das gemeinsame Bild auf deiner obersten Karte und der Mitte. Tippe deine Karte und wähle dann das passende Bild.";
+      ? "Find the matching picture on your card and the center card. Tap that picture right on your card."
+      : "Finde das gemeinsame Bild auf deiner Karte und der Mitte. Tippe das Bild direkt auf deiner Karte an.";
   },
   rules(context) {
     return context.language === "en" ? [
       { title: "Goal", lines: ["Be the first to play all your cards."] },
-      { title: "How to play", lines: ["Everyone plays at once. Compare your top card with the center card: exactly one picture matches.", "Tap your card, then tap the matching picture. A correct answer puts your card in the center and reveals your next card.", "A wrong answer locks you for 7 seconds, or until any player solves the current card.", "If another player solves the card first, a correct or mistaken tap from the old card within 2 seconds is treated as a near-simultaneous attempt and carries no penalty."] }
+      { title: "How to play", lines: ["Everyone plays at once. Compare your top card with the center card: exactly one picture matches.", "Tap the matching picture directly on your card. A correct answer puts your card in the center and reveals your next card.", "A wrong answer locks you for 7 seconds, or until any player solves the current card.", "If another player solves the card first, a correct or mistaken tap from the old card within 2 seconds is treated as a near-simultaneous attempt and carries no penalty."] }
     ] : [
       { title: "Ziel", lines: ["Lege als Erste oder Erster alle eigenen Karten ab."] },
-      { title: "Ablauf", lines: ["Alle spielen gleichzeitig. Vergleiche deine oberste Karte mit der Karte in der Mitte: Genau ein Bild ist gleich.", "Tippe deine Karte und wähle dann das passende Bild. Bei einem Treffer kommt deine Karte in die Mitte und deine nächste Karte wird aufgedeckt.", "Ein falscher Tipp sperrt dich 7 Sekunden oder bis jemand die aktuelle Karte löst.", "Löst jemand die Karte zuerst, zählt ein Klick auf die alte Karte innerhalb von 2 Sekunden als nahezu gleichzeitiger Versuch und wird nicht bestraft."] }
+      { title: "Ablauf", lines: ["Alle spielen gleichzeitig. Vergleiche deine Karte mit der Karte in der Mitte: Genau ein Bild ist gleich.", "Tippe das passende Bild direkt auf deiner Karte an. Bei einem Treffer kommt deine Karte in die Mitte und deine nächste Karte wird aufgedeckt.", "Ein falscher Tipp sperrt dich 7 Sekunden oder bis jemand die aktuelle Karte löst.", "Löst jemand die Karte zuerst, zählt ein Klick auf die alte Karte innerhalb von 2 Sekunden als nahezu gleichzeitiger Versuch und wird nicht bestraft."] }
     ];
   },
   canPlayCard(state, context, playerId, cardId) {
