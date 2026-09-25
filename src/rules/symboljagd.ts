@@ -7,6 +7,12 @@ import type { CardTableStackState } from "../protocol.js";
 const centerZone = "symboljagd-center";
 const lastChallengeKey = "symboljagdLastChallenge";
 const lastSolvedAtKey = "symboljagdLastSolvedAt";
+const feedbackKeys = {
+  playerId: "symboljagdFeedbackPlayerId",
+  playerName: "symboljagdFeedbackPlayerName",
+  symbolId: "symboljagdFeedbackSymbolId",
+  occurredAt: "symboljagdFeedbackOccurredAt"
+} as const;
 const blockedKey = (playerId: string) => `symboljagdBlocked:${playerId}`;
 const names = ["Fuchs", "Eule", "Schlüssel", "Mond", "Sonne", "Kaktus", "Drache", "Apfel", "Pilz", "Anker", "Teekanne", "Krone", "Feder", "Fisch", "Karotte", "Geist", "Spinne", "Schmetterling", "Schneeflocke", "Blitz", "Herz", "Kleeblatt", "Kerze", "Sanduhr", "Kompass", "Fernrohr", "Brille", "Hammer", "Geige", "Zauberstab", "Zaubertrank", "Kristallkugel", "Luftballon", "Papierboot", "Schildkröte", "Katze", "Hund", "Biene", "Marienkäfer", "Orange", "Käse", "Eiswaffel", "Zylinder", "Ring", "Glocke", "Regenschirm", "Segelboot", "Leuchtturm", "Diamant", "Perle", "Muschel", "Planet", "Sternschnuppe", "Phönixfeder", "Burg", "Frosch", "Blaue Flamme"];
 const namesEn = ["Fox", "Owl", "Key", "Moon", "Sun", "Cactus", "Dragon", "Apple", "Mushroom", "Anchor", "Teapot", "Crown", "Feather", "Fish", "Carrot", "Ghost", "Spider", "Butterfly", "Snowflake", "Lightning", "Heart", "Clover", "Candle", "Hourglass", "Compass", "Telescope", "Glasses", "Hammer", "Violin", "Wand", "Potion", "Crystal ball", "Balloon", "Paper boat", "Turtle", "Cat", "Dog", "Bee", "Ladybug", "Orange", "Cheese", "Ice cream", "Top hat", "Ring", "Bell", "Umbrella", "Sailboat", "Lighthouse", "Diamond", "Pearl", "Seashell", "Planet", "Shooting star", "Phoenix feather", "Castle", "Frog", "Blue flame"];
@@ -109,7 +115,15 @@ export const symboljagdRuleset: CardRuleset = {
 
     let table = moveCard(state.table, centerId, { kind: "zone", zoneId: "symboljagd-history" });
     table = moveCard(table, cardId, { kind: "zone", zoneId: centerZone });
-    const extra: CardGameState["extra"] = { ...state.extra, [lastChallengeKey]: centerId, [lastSolvedAtKey]: context.now };
+    const extra: CardGameState["extra"] = {
+      ...state.extra,
+      [lastChallengeKey]: centerId,
+      [lastSolvedAtKey]: context.now,
+      [feedbackKeys.playerId]: playerId,
+      [feedbackKeys.playerName]: playerName(context, playerId),
+      [feedbackKeys.symbolId]: symbolId,
+      [feedbackKeys.occurredAt]: context.now
+    };
     for (const id of table.turnOrder) extra[blockedKey(id)] = 0;
     const next = { ...state, table, extra, updatedAt: context.now, message: `${playerName(context, playerId)}: ${names[Number(symbolId)] ?? symbolId}` };
     const remaining = handOf(table, playerId).length;

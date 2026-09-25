@@ -2,10 +2,10 @@
  * Tischgeräusche.
  *
  * Der Klang entsteht im Code, genau wie die Karten selbst als SVG entstehen -
- * es wird also keine Audiodatei ausgeliefert. Zwei Geräusche reichen: das
- * Klacken einer einzelnen Karte auf dem Tisch und das weichere Schieben, wenn
- * ein Stich abgeräumt wird. Beide sind kurz und leise; der Tisch soll nicht
- * dauernd Aufmerksamkeit fordern.
+ * es wird also keine Audiodatei ausgeliefert. Karten klacken kurz auf dem Tisch,
+ * Treffer bekommen einen hellen Pling, und Stiche werden weich abgeräumt. Alle
+ * Geräusche sind kurz und leise; der Tisch soll nicht dauernd Aufmerksamkeit
+ * fordern.
  *
  * Gespielt wird nur auf dem Host. Vier gleichzeitig klackernde Handys wären
  * Lärm, und am echten Tisch macht auch der Tisch das Geräusch, nicht die Hand.
@@ -117,6 +117,25 @@ export function playCardDrop(): void {
     thump.connect(thumpGain).connect(ctx.destination);
     thump.start(now);
     thump.stop(now + 0.09);
+  });
+}
+
+/** Heller Zweiton, wenn ein Symbol gefunden und die Karte abgelegt wurde. */
+export function playSymboljagdHit(): void {
+  play((ctx, now) => {
+    for (const [frequency, offset] of [[880, 0], [1_320, 0.085]] as const) {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const start = now + offset;
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.12, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
+      oscillator.connect(gain).connect(ctx.destination);
+      oscillator.start(start);
+      oscillator.stop(start + 0.25);
+    }
   });
 }
 

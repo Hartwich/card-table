@@ -65,14 +65,15 @@ function cardWidthFor(stacks: CardTablePublicState["stacks"]): number {
 function seatHtml(
   seat: CardTableSeatState,
   backStyle: CardTablePublicState["backStyle"],
-  botLabel: string
+  botLabel: string,
+  recentSolverId?: string
 ): string {
   const mini = Array.from({ length: Math.min(5, seat.handCount) }, (_, index) =>
     `<span class="ct-mini" style="margin-left:${index === 0 ? 0 : -14}px">${cardBackHtml(backStyle, 24)}</span>`
   ).join("");
   const badge = seat.isBot ? `<em class="ct-seat-bot">${escapeHtml(botLabel)}</em>` : "";
 
-  return `<div class="ct-seat${seat.isActive ? " is-active" : ""}${seat.connected ? "" : " is-away"}${seat.isBot ? " is-bot" : ""}" data-seat="${escapeHtml(seat.playerId)}">
+  return `<div class="ct-seat${seat.isActive ? " is-active" : ""}${seat.connected ? "" : " is-away"}${seat.isBot ? " is-bot" : ""}${seat.playerId === recentSolverId ? " is-symboljagd-winner" : ""}" data-seat="${escapeHtml(seat.playerId)}">
     <span class="ct-seat-dot" style="background:${escapeHtml(seat.color)}"></span>
     <div class="ct-seat-body">
       <span class="ct-seat-name">${escapeHtml(seat.name)}${badge}</span>
@@ -139,8 +140,13 @@ export function renderCardTableHtml(
   const error = state.lastError
     ? `<span class="ct-chip is-error">${escapeHtml(state.lastError)}</span>`
     : "";
+  const feedback = state.rulesetId === "symboljagd" ? state.symboljagdFeedback : undefined;
+  const feedbackSymbolId = Number.parseInt(feedback?.symbolId ?? "", 10);
+  const feedbackSymbol = feedback && Number.isInteger(feedbackSymbolId) && feedbackSymbolId >= 0 && feedbackSymbolId < 57
+    ? `<div class="ct-symboljagd-feedback" aria-hidden="true"><img class="is-left" src="/card-table/symboljagd-icons/${String(feedbackSymbolId).padStart(2, "0")}.png" alt=""><img class="is-right" src="/card-table/symboljagd-icons/${String(feedbackSymbolId).padStart(2, "0")}.png" alt=""></div>`
+    : "";
 
-  return `<div class="ct-table${state.rulesetId === "zahlenreihe" ? " is-number-rows" : ""}">
+  return `<div class="ct-table${state.rulesetId === "zahlenreihe" ? " is-number-rows" : ""}${state.rulesetId === "symboljagd" ? " is-symboljagd" : ""}">
     <header class="ct-head">
       <span class="ct-head-title">${escapeHtml(state.title)}</span>
       <div class="ct-head-side">
@@ -150,8 +156,8 @@ export function renderCardTableHtml(
         <button type="button" class="ct-rules-button" data-card-table-panel="rules">${escapeHtml(text.rules)}</button>
       </div>
     </header>
-    <div class="ct-seats">${state.seats.map((seat) => seatHtml(seat, state.backStyle, text.bot)).join("")}</div>
-    <div class="ct-stacks">${stacks.map((stack) => stackHtml(stack, state.backStyle, state.rulesetId === "zahlenreihe" ? (stack.kind === "draw" ? 48 : 108) : cardWidth, state.cardStyle)).join("")}</div>
+    <div class="ct-seats">${state.seats.map((seat) => seatHtml(seat, state.backStyle, text.bot, feedback?.playerId)).join("")}</div>
+    <div class="ct-stacks" style="--ct-center-card-width:${cardWidth}px">${stacks.map((stack) => stackHtml(stack, state.backStyle, state.rulesetId === "zahlenreihe" ? (stack.kind === "draw" ? 48 : 108) : cardWidth, state.cardStyle)).join("")}${feedbackSymbol}</div>
     <footer class="ct-actions">${state.hostActions.map(actionHtml).join("")}</footer>
   </div>
   ${options.rulesOpen ? rulesHtml(state, language) : ""}`;
@@ -198,12 +204,19 @@ export const cardTableStyles = `
   letter-spacing:.09em;padding:2px 6px;border-radius:6px;color:#f7f1e7;
   background:rgba(255,251,244,.16);border:1px solid rgba(255,251,244,.4)}
 .ct-seat.is-bot{border-style:dashed}
+.ct-seat.is-symboljagd-winner{animation:ct-symboljagd-seat 1.45s ease-out both;position:relative;z-index:4}
+@keyframes ct-symboljagd-seat{0%,100%{box-shadow:none;outline-color:transparent}12%,68%{box-shadow:0 0 24px rgba(255,221,115,.62);outline:3px solid #ffe27a;outline-offset:3px}}
 .ct-seat-meta{display:flex;align-items:baseline;gap:8px;font-size:.82rem;opacity:.85}
 .ct-seat-meta b{font-family:var(--ct-display);font-size:1.35rem;opacity:1}
 .ct-seat-meta i{font-style:normal;color:var(--ct-accent);font-weight:700}
 .ct-seat-hand{display:flex;flex:0 0 auto}
 .ct-mini{display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
-.ct-stacks{display:flex;align-items:center;justify-content:center;gap:clamp(18px,3.4vw,52px);flex-wrap:wrap}
+.ct-stacks{position:relative;display:flex;align-items:center;justify-content:center;gap:clamp(18px,3.4vw,52px);flex-wrap:wrap}
+.ct-symboljagd-feedback{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible}
+.ct-symboljagd-feedback img{position:absolute;top:50%;width:clamp(76px,10vw,128px);height:auto;transform:translateY(-50%);filter:drop-shadow(0 9px 12px rgba(0,0,0,.38));animation:ct-symboljagd-pop 1.45s cubic-bezier(.2,.75,.3,1) both}
+.ct-symboljagd-feedback img.is-left{left:calc(50% - var(--ct-center-card-width, 280px)/2 - clamp(76px,10vw,128px) - 18px)}
+.ct-symboljagd-feedback img.is-right{left:calc(50% + var(--ct-center-card-width, 280px)/2 + 18px)}
+@keyframes ct-symboljagd-pop{0%{opacity:0;scale:.48;rotate:-14deg}18%{opacity:1;scale:1.08;rotate:0deg}65%{opacity:1;scale:1}100%{opacity:0;scale:.84;translate:0 -12px}}
 .is-number-rows .ct-stacks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-content:center}
 .is-number-rows .ct-stack[data-stack="draw"]{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:18px}
 .is-number-rows .ct-stack-label{white-space:normal;text-align:center;flex-wrap:wrap;justify-content:center;padding:4px 8px}

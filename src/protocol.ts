@@ -160,6 +160,8 @@ export interface CardTablePublicState {
   winnerPlayerId?: string;
   winnerName?: string;
   lastError?: string;
+  /** Kurzlebiger Trefferimpuls für Ton, Sitzplatzrahmen und Bildanzeige. */
+  symboljagdFeedback?: { playerId: string; playerName: string; symbolId: string; occurredAt: number };
   /**
    * Wer den zuletzt abgeräumten Stich bekommen hat, und der wievielte es war.
    *

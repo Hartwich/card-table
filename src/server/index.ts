@@ -378,6 +378,14 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
   const deck = rulesetContext.deck;
   const activeId = state.table.turnOrder[state.table.activeIndex] ?? null;
   const condition = ruleset.condition(state, rulesetContext);
+  const feedbackPlayerId = state.extra.symboljagdFeedbackPlayerId;
+  const feedbackPlayerName = state.extra.symboljagdFeedbackPlayerName;
+  const feedbackSymbolId = state.extra.symboljagdFeedbackSymbolId;
+  const feedbackOccurredAt = state.extra.symboljagdFeedbackOccurredAt;
+  const feedback = typeof feedbackPlayerId === "string" && typeof feedbackPlayerName === "string"
+    && typeof feedbackSymbolId === "string" && typeof feedbackOccurredAt === "number"
+    ? { playerId: feedbackPlayerId, playerName: feedbackPlayerName, symbolId: feedbackSymbolId, occurredAt: feedbackOccurredAt }
+    : undefined;
 
   return {
     rulesetId: ruleset.id,
@@ -402,6 +410,9 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
     winnerPlayerId: state.winnerPlayerId,
     winnerName: state.winnerName,
     lastError: state.lastError,
+    ...(feedback && context.now >= feedback.occurredAt && context.now - feedback.occurredAt <= 1_600
+      ? { symboljagdFeedback: feedback }
+      : {}),
     lastTrickWinnerId: state.lastTrickWinnerId,
     lastTrickSerial: state.lastTrickSerial,
     revealOnDemand: state.showOnDemand === true,

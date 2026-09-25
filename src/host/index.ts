@@ -4,7 +4,7 @@ import type { CardTablePublicState } from "../protocol.js";
 import { roundScreenHtml, type RoundScreenStateLike } from "./roundScreens.js";
 import { cardTableLabels, cardTableStyles, renderCardTableHtml } from "./tableHtml.js";
 import { bindPlatformTheme, tokens } from "./platformTheme.js";
-import { playCardDrop, playTrickSweep, resumeTableAudio } from "./tableSounds.js";
+import { playCardDrop, playSymboljagdHit, playTrickSweep, resumeTableAudio } from "./tableSounds.js";
 
 /**
  * Der Spieltisch auf dem geteilten Bildschirm.
@@ -183,6 +183,15 @@ export class CardTableHostScene extends Phaser.Scene {
     next: CardTablePublicState | null
   ): void {
     if (!next || !previous) {
+      return;
+    }
+
+    const symbolHit = next.rulesetId === "symboljagd"
+      && next.symboljagdFeedback
+      && next.symboljagdFeedback.occurredAt !== previous.symboljagdFeedback?.occurredAt;
+
+    if (symbolHit) {
+      playSymboljagdHit();
       return;
     }
 

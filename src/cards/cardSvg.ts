@@ -135,18 +135,16 @@ function clearBody(face: CardFace, ink: string, width: number, height: number): 
 }
 
 function symboljagdBody(face: CardFace, width: number, height: number): string {
-  const positions: Array<[number, number, number]> = [[20, 22, 22], [72, 20, 16], [49, 43, 34], [19, 61, 17], [79, 59, 28], [43, 79, 18], [75, 91, 15], [22, 96, 15]];
+  const positions: Array<[number, number, number]> = [[22, 15, 23], [75, 17, 19], [49, 40, 37], [19, 62, 20], [80, 61, 30], [43, 87, 20], [74, 114, 20], [22, 127, 20]];
   const seed = [...face.cardId].reduce((value, char) => value + char.charCodeAt(0), 0) % 8;
   const icons = (face.symbols ?? []).map((symbol, index) => {
     const [cx, cy, size] = positions[(index + seed) % positions.length]!;
     const cell = Math.max(0, Math.min(56, Number.parseInt(symbol, 10) || 0));
-    const x = cell % 8;
-    const y = Math.floor(cell / 8);
     const left = (cx - size / 2) * width / 100;
     const top = (cy - size / 2) * height / 140;
     const edge = size * width / 100;
-    const cellSize = 1254 / 8;
-    return `<svg x="${left}" y="${top}" width="${edge}" height="${edge}" viewBox="${x * cellSize} ${y * cellSize} ${cellSize} ${cellSize}" preserveAspectRatio="xMidYMid meet"><image href="/card-table/symboljagd-atlas.png" x="0" y="0" width="1254" height="1254" /></svg>`;
+    const filename = String(cell).padStart(2, "0");
+    return `<image href="/card-table/symboljagd-icons/${filename}.png" x="${left}" y="${top}" width="${edge}" height="${edge}" preserveAspectRatio="xMidYMid meet" />`;
   }).join("");
   return `<rect x="5" y="5" width="90" height="130" rx="6" fill="#fffbf4" />${icons}`;
 }
