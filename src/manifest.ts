@@ -39,7 +39,26 @@ export const cardTableManifest = {
       "Gemeinsamer Spieltisch für zwölf Kartenspiele: Mau-Mau, Schwimmen, Stichwette, Zahlenreihe, Lügen, Schwarzer Peter, Fischen, Herzeln, Doppelkopf, Rommé, Symboljagd und freies Spiel.",
   // Eine Person reicht: Fehlende Plätze füllt der Tisch mit KI-Sitzen auf.
   minPlayers: 1,
-  maxPlayers: 6,
+  // Die Lobby kann bis zu 16 Personen aufnehmen; das gewählte Regelwerk setzt
+  // die tatsächliche Obergrenze (z. B. vier bei Doppelkopf).
+  maxPlayers: 16,
+  maxPlayersBySetting: {
+    settingKey: cardTableRoomSettingKeys.ruleset,
+    values: {
+      "mau-mau": 6,
+      schwimmen: 6,
+      stichwette: 6,
+      zahlenreihe: 6,
+      luegen: 6,
+      "schwarzer-peter": 6,
+      fischen: 6,
+      herzeln: 6,
+      doppelkopf: 4,
+      romme: 6,
+      symboljagd: 16,
+      "free-play": 6
+    }
+  },
   hostView: "CardTableHostScene",
   controllerView: "card-table",
   controllerLayout: "card_hand",
@@ -49,7 +68,7 @@ export const cardTableManifest = {
   scoreScope: "game",
   lobbySetup: {
     title: "Kartentisch Setup",
-    description: "Regelwerk, Deck und Handkarten wählen.",
+    description: "Regelwerk, Deck und Handkarten wählen. Je nach Regelwerk spielen bis zu 6 Personen mit, bei Symboljagd bis zu 16 und bei Doppelkopf bis zu 4.",
     fields: [
       {
         kind: "select",
