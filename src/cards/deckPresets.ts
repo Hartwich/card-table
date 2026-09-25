@@ -262,33 +262,91 @@ export const numbers80Deck: DeckDefinition = createCustomDeck({
   backStyle: "grid"
 });
 
-/** 57 unterschiedliche Bildmotive für Symboljagd. */
+/** Bildmotive für die drei exakt konstruierten Symboljagd-Sets. */
 export const symboljagdSymbols = [
-  "fox", "owl", "key", "moon", "sun", "cactus", "dragon", "apple", "mushroom", "anchor", "teapot", "crown", "feather", "fish", "carrot", "ghost", "spider", "butterfly", "snowflake", "lightning", "heart", "clover", "candle", "hourglass", "compass", "telescope", "glasses", "hammer", "violin", "wand", "potion", "crystal", "balloon", "paper-boat", "turtle", "cat", "dog", "bee", "ladybug", "orange", "cheese", "ice-cream", "top-hat", "ring", "bell", "umbrella", "sailboat", "lighthouse", "diamond", "pearl", "shell", "planet", "shooting-star", "phoenix-feather", "castle", "frog", "blue-flame"
+  "fox", "owl", "key", "moon", "sun", "cactus", "dragon", "apple", "mushroom", "anchor", "teapot", "crown", "feather", "fish", "carrot", "ghost", "spider", "butterfly", "snowflake", "lightning", "heart", "clover", "candle", "hourglass", "compass", "telescope", "glasses", "hammer", "violin", "wand", "potion", "crystal", "balloon", "paper-boat", "turtle", "cat", "dog", "bee", "ladybug", "orange", "cheese", "ice-cream", "top-hat", "ring", "bell", "umbrella", "sailboat", "lighthouse", "diamond", "pearl", "shell", "planet", "shooting-star", "phoenix-feather", "castle", "frog", "blue-flame",
+  "accordion", "fire-truck", "bicycle", "camera", "cupcake", "soccer-ball", "roller-skate", "watering-can", "paint-palette", "trophy", "folded-map", "backpack", "drum", "sewing-spool", "traffic-cone", "garden-hose", "alarm-clock", "mitten", "rubber-boot", "train", "flamingo-float", "chess-rook", "opera-mask", "books", "vase", "yo-yo", "boxing-glove", "rocking-horse", "suitcase", "glass-marble", "paint-roller", "traffic-light", "radio", "magnifying-glass"
 ] as const;
 
 const symboljagdSuits: CardSuitDefinition[] = [{ id: "symbols", symbol: "✦", label: "Symbole", color: "neutral" }];
-const symboljagdRanks: CardRankDefinition[] = Array.from({ length: 57 }, (_, i) => ({ id: `card-${i + 1}`, label: "✦", order: i + 1 }));
-const mod7 = (value: number) => ((value % 7) + 7) % 7;
-const point = (x: number, y: number) => String(x * 7 + y);
-const slope = (n: number) => String(49 + n);
-const vertical = "56";
-const symboljagdCards: CardDefinition[] = [];
-for (let m = 0; m < 7; m++) {
-  for (let b = 0; b < 7; b++) {
-    const id = `card-${symboljagdCards.length + 1}`;
-    symboljagdCards.push({ id, suitId: "symbols", rankId: id, tags: [...Array.from({ length: 7 }, (_, x) => `sym:${point(x, mod7(m * x + b))}`), `sym:${slope(m)}`] });
+function symbolField(order: number): { add(a: number, b: number): number; multiply(a: number, b: number): number } {
+  if (order === 7) return {
+    add: (a, b) => (a + b) % 7,
+    multiply: (a, b) => (a * b) % 7
+  };
+  if (order === 8) {
+    // GF(2³) with irreducible polynomial x³ + x + 1.
+    const multiply = (left: number, right: number) => {
+      let a = left;
+      let b = right;
+      let result = 0;
+      while (b > 0) {
+        if (b & 1) result ^= a;
+        b >>= 1;
+        a <<= 1;
+        if (a & 0b1000) a ^= 0b1011;
+      }
+      return result;
+    };
+    return { add: (a, b) => a ^ b, multiply };
   }
+  if (order === 9) {
+    // GF(3²), represented as a + b·i with i² = -1.
+    const add = (a: number, b: number) => {
+      const real = (a % 3 + b % 3) % 3;
+      const imaginary = (Math.floor(a / 3) + Math.floor(b / 3)) % 3;
+      return real + imaginary * 3;
+    };
+    const multiply = (a: number, b: number) => {
+      const ar = a % 3;
+      const ai = Math.floor(a / 3);
+      const br = b % 3;
+      const bi = Math.floor(b / 3);
+      const real = ((ar * br - ai * bi) % 3 + 3) % 3;
+      const imaginary = (ar * bi + ai * br) % 3;
+      return real + imaginary * 3;
+    };
+    return { add, multiply };
+  }
+  throw new Error(`Unsupported Symboljagd field order ${order}`);
 }
-for (let x = 0; x < 7; x++) {
-  const id = `card-${symboljagdCards.length + 1}`;
-  symboljagdCards.push({ id, suitId: "symbols", rankId: id, tags: [...Array.from({ length: 7 }, (_, y) => `sym:${point(x, y)}`), `sym:${vertical}`] });
+
+function makeSymboljagdDeck(order: number): DeckDefinition {
+  const { add, multiply } = symbolField(order);
+  const cardCount = order * order + order + 1;
+  const point = (x: number, y: number) => String(x * order + y);
+  const slope = (value: number) => String(order * order + value);
+  const vertical = String(order * order + order);
+  const cards: CardDefinition[] = [];
+  const append = (tags: string[]) => {
+    const id = `card-${cards.length + 1}`;
+    cards.push({ id, suitId: "symbols", rankId: id, tags });
+  };
+
+  for (let m = 0; m < order; m++) {
+    for (let b = 0; b < order; b++) {
+      append([...Array.from({ length: order }, (_, x) => `sym:${point(x, add(multiply(m, x), b))}`), `sym:${slope(m)}`]);
+    }
+  }
+  for (let x = 0; x < order; x++) {
+    append([...Array.from({ length: order }, (_, y) => `sym:${point(x, y)}`), `sym:${vertical}`]);
+  }
+  append([...Array.from({ length: order }, (_, m) => `sym:${slope(m)}`), `sym:${vertical}`]);
+
+  const ranks = Array.from({ length: cardCount }, (_, index) => ({ id: `card-${index + 1}`, label: "✦", order: index + 1 }));
+  return {
+    id: `symboljagd-${cardCount}`,
+    label: `Symboljagd-Bildkarten (${cardCount})`,
+    suits: symboljagdSuits,
+    ranks,
+    cards,
+    backStyle: "diamond"
+  };
 }
-const finalCardId = `card-${symboljagdCards.length + 1}`;
-symboljagdCards.push({ id: finalCardId, suitId: "symbols", rankId: finalCardId, tags: [...Array.from({ length: 7 }, (_, m) => `sym:${slope(m)}`), `sym:${vertical}`] });
-export const symboljagd57Deck: DeckDefinition = {
-  id: "symboljagd-57", label: "Symboljagd-Bildkarten (57)", suits: symboljagdSuits, ranks: symboljagdRanks, cards: symboljagdCards, backStyle: "diamond"
-};
+
+export const symboljagd57Deck = makeSymboljagdDeck(7);
+export const symboljagd73Deck = makeSymboljagdDeck(8);
+export const symboljagd91Deck = makeSymboljagdDeck(9);
 
 /** Die einzelne Karte ohne Partner. */
 export const peterRank: CardRankDefinition = {
@@ -372,6 +430,8 @@ export const allCardDecks: DeckDefinition[] = [
   trickBet60Deck,
   numbers80Deck,
   symboljagd57Deck,
+  symboljagd73Deck,
+  symboljagd91Deck,
   peter49Deck,
   romme108Deck,
   doppelkopf48Deck,

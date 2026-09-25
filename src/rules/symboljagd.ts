@@ -14,8 +14,8 @@ const feedbackKeys = {
   occurredAt: "symboljagdFeedbackOccurredAt"
 } as const;
 const blockedKey = (playerId: string) => `symboljagdBlocked:${playerId}`;
-const names = ["Fuchs", "Eule", "Schlüssel", "Mond", "Sonne", "Kaktus", "Drache", "Apfel", "Pilz", "Anker", "Teekanne", "Krone", "Feder", "Fisch", "Karotte", "Geist", "Spinne", "Schmetterling", "Schneeflocke", "Blitz", "Herz", "Kleeblatt", "Kerze", "Sanduhr", "Kompass", "Fernrohr", "Brille", "Hammer", "Geige", "Zauberstab", "Zaubertrank", "Kristallkugel", "Luftballon", "Papierboot", "Schildkröte", "Katze", "Hund", "Biene", "Marienkäfer", "Orange", "Käse", "Eiswaffel", "Zylinder", "Ring", "Glocke", "Regenschirm", "Segelboot", "Leuchtturm", "Diamant", "Perle", "Muschel", "Planet", "Sternschnuppe", "Phönixfeder", "Burg", "Frosch", "Blaue Flamme"];
-const namesEn = ["Fox", "Owl", "Key", "Moon", "Sun", "Cactus", "Dragon", "Apple", "Mushroom", "Anchor", "Teapot", "Crown", "Feather", "Fish", "Carrot", "Ghost", "Spider", "Butterfly", "Snowflake", "Lightning", "Heart", "Clover", "Candle", "Hourglass", "Compass", "Telescope", "Glasses", "Hammer", "Violin", "Wand", "Potion", "Crystal ball", "Balloon", "Paper boat", "Turtle", "Cat", "Dog", "Bee", "Ladybug", "Orange", "Cheese", "Ice cream", "Top hat", "Ring", "Bell", "Umbrella", "Sailboat", "Lighthouse", "Diamond", "Pearl", "Seashell", "Planet", "Shooting star", "Phoenix feather", "Castle", "Frog", "Blue flame"];
+const names = ["Fuchs", "Eule", "Schlüssel", "Mond", "Sonne", "Kaktus", "Drache", "Apfel", "Pilz", "Anker", "Teekanne", "Krone", "Feder", "Fisch", "Karotte", "Geist", "Spinne", "Schmetterling", "Schneeflocke", "Blitz", "Herz", "Kleeblatt", "Kerze", "Sanduhr", "Kompass", "Fernrohr", "Brille", "Hammer", "Geige", "Zauberstab", "Zaubertrank", "Kristallkugel", "Luftballon", "Papierboot", "Schildkröte", "Katze", "Hund", "Biene", "Marienkäfer", "Orange", "Käse", "Eiswaffel", "Zylinder", "Ring", "Glocke", "Regenschirm", "Segelboot", "Leuchtturm", "Diamant", "Perle", "Muschel", "Planet", "Sternschnuppe", "Phönixfeder", "Burg", "Frosch", "Blaue Flamme", "Akkordeon", "Feuerwehrauto", "Fahrrad", "Kamera", "Cupcake", "Fußball", "Rollschuh", "Gießkanne", "Farbpalette", "Pokal", "Faltkarte", "Rucksack", "Trommel", "Garnspule", "Leitkegel", "Gartenschlauch", "Wecker", "Fäustling", "Gummistiefel", "Zug", "Flamingo-Schwimmring", "Schachturm", "Theatermaske", "Bücherstapel", "Vase", "Jo-Jo", "Boxhandschuh", "Schaukelpferd", "Koffer", "Glasmurmel", "Farbroller", "Ampel", "Radio", "Lupe"];
+const namesEn = ["Fox", "Owl", "Key", "Moon", "Sun", "Cactus", "Dragon", "Apple", "Mushroom", "Anchor", "Teapot", "Crown", "Feather", "Fish", "Carrot", "Ghost", "Spider", "Butterfly", "Snowflake", "Lightning", "Heart", "Clover", "Candle", "Hourglass", "Compass", "Telescope", "Glasses", "Hammer", "Violin", "Wand", "Potion", "Crystal ball", "Balloon", "Paper boat", "Turtle", "Cat", "Dog", "Bee", "Ladybug", "Orange", "Cheese", "Ice cream", "Top hat", "Ring", "Bell", "Umbrella", "Sailboat", "Lighthouse", "Diamond", "Pearl", "Seashell", "Planet", "Shooting star", "Phoenix feather", "Castle", "Frog", "Blue flame", "Accordion", "Fire truck", "Bicycle", "Camera", "Cupcake", "Soccer ball", "Roller skate", "Watering can", "Paint palette", "Trophy", "Folded map", "Backpack", "Drum", "Sewing spool", "Traffic cone", "Garden hose", "Alarm clock", "Mitten", "Rubber boot", "Train", "Flamingo float", "Chess rook", "Opera mask", "Books", "Vase", "Yo-yo", "Boxing glove", "Rocking horse", "Suitcase", "Glass marble", "Paint roller", "Traffic light", "Radio", "Magnifying glass"];
 
 function symbols(state: Parameters<CardRuleset["choiceForCard"]>[0], cardId: string): string[] {
   return state.table.cards[cardId]?.tags.filter((tag) => tag.startsWith("sym:")).map((tag) => tag.slice(4)) ?? [];
@@ -34,7 +34,10 @@ export const symboljagdRuleset: CardRuleset = {
   id: "symboljagd",
   label: { de: "Symboljagd", en: "Symbol Hunt" },
   defaultDeckId: "symboljagd-57",
-  fixedDeckId: "symboljagd-57",
+  deckIdFor(settings) {
+    const symbolsPerCard = Number(settings.cardTableSymboljagdSymbolsPerCard ?? 8);
+    return symbolsPerCard === 10 ? "symboljagd-91" : symbolsPerCard === 9 ? "symboljagd-73" : "symboljagd-57";
+  },
   defaultHandSize: 9,
   controllerHandLimit: 1,
   openStartCard: false,

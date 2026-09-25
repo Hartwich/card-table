@@ -135,11 +135,12 @@ function clearBody(face: CardFace, ink: string, width: number, height: number): 
 }
 
 function symboljagdBody(face: CardFace, width: number, height: number): string {
-  const positions: Array<[number, number, number]> = [[22, 15, 23], [75, 17, 19], [49, 40, 37], [19, 62, 20], [80, 61, 30], [43, 87, 20], [74, 114, 20], [22, 127, 20]];
-  const seed = [...face.cardId].reduce((value, char) => value + char.charCodeAt(0), 0) % 8;
+  const positions: Array<[number, number, number]> = [[22, 15, 23], [75, 17, 19], [49, 40, 37], [19, 62, 20], [80, 61, 30], [43, 87, 20], [74, 114, 20], [22, 127, 20], [49, 11, 16], [49, 108, 17]];
+  const layoutCount = Math.min(face.symbols?.length ?? positions.length, positions.length);
+  const seed = [...face.cardId].reduce((value, char) => value + char.charCodeAt(0), 0) % layoutCount;
   const icons = (face.symbols ?? []).map((symbol, index) => {
-    const [cx, cy, size] = positions[(index + seed) % positions.length]!;
-    const cell = Math.max(0, Math.min(56, Number.parseInt(symbol, 10) || 0));
+    const [cx, cy, size] = positions[(index + seed) % layoutCount]!;
+    const cell = Math.max(0, Math.min(90, Number.parseInt(symbol, 10) || 0));
     const left = (cx - size / 2) * width / 100;
     const top = (cy - size / 2) * height / 140;
     const edge = size * width / 100;
@@ -159,7 +160,7 @@ export function renderCardFaceSvg(face: CardFace, options: CardSvgOptions = {}):
   const accent = options.muted ? "#eceae6" : palette.accent;
   const border = options.selected ? "#6e8b74" : "#ded5c7";
   const borderWidth = options.selected ? width * 0.03 : width * 0.012;
-  const body = face.symbols?.length === 8
+  const body = (face.symbols?.length ?? 0) >= 8
     ? symboljagdBody(face, width, height)
     : face.art === "arcane" && style !== "clear"
       ? `<g transform="scale(${width / 100} ${height / 140})">

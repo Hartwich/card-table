@@ -28,7 +28,8 @@ export const cardTableRoomSettingKeys = {
   dokoPigs: "cardTableDokoPigs",
   dokoAgainstOld: "cardTableDokoAgainstOld",
   dokoBock: "cardTableDokoBock",
-  dokoForced: "cardTableDokoForced"
+  dokoForced: "cardTableDokoForced",
+  symboljagdSymbolsPerCard: "cardTableSymboljagdSymbolsPerCard"
 } as const;
 
 export const cardTableManifest = {
@@ -119,6 +120,21 @@ export const cardTableManifest = {
             description: "Offener Tisch ohne Regeln: jede Karte darf abgelegt werden."
           }
         ].map((option) => ({ ...option, rules: selectionRules(option.id) }))
+      },
+      {
+        kind: "select",
+        id: "symboljagdSymbolsPerCard",
+        settingKey: cardTableRoomSettingKeys.symboljagdSymbolsPerCard,
+        actionKey: "symboljagdSymbolsPerCard",
+        label: "Symbole pro Karte",
+        description: "Mehr Motive machen die Übereinstimmung schwieriger. Die Kartensätze bleiben mathematisch eindeutig.",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["symboljagd"] },
+        defaultValue: "8",
+        options: [
+          { id: "8", label: "8 Symbole · Standard", description: "57 Motive und 57 Karten." },
+          { id: "9", label: "9 Symbole · Anspruchsvoll", description: "73 Motive und 73 Karten." },
+          { id: "10", label: "10 Symbole · Profi", description: "91 Motive und 91 Karten." }
+        ]
       },
       {
         kind: "select",

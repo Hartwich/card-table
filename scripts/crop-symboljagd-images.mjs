@@ -6,6 +6,13 @@ import { PNG } from "pngjs";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = path.resolve(packageRoot, "../..");
 const sourcePath = path.join(packageRoot, "public/host/card-table/symboljagd-atlas.png");
+const extraSheetPath = path.join(packageRoot, "assets/symboljagd-extra-sheet.png");
+const extraThreePath = path.join(packageRoot, "assets/symboljagd-extra-three.png");
+const originalSymbolCount = 57;
+const totalSymbolCount = 91;
+// Remove the second map, the second cake, and the second ball so every added
+// picture has a distinct silhouette and concept.
+const extraSheetCells = Array.from({ length: 34 }, (_, index) => index).filter((index) => ![17, 23, 32].includes(index));
 const outputDirectories = [
   path.join(packageRoot, "public/host/card-table/symboljagd-icons"),
   path.join(packageRoot, "public/controller/card-table/symboljagd-icons"),
@@ -120,6 +127,73 @@ function makeCutout(source, components, symbolId) {
   return { cutout, path: { kind: "transparent alpha contour" } };
 }
 
+function cutGridCells(source, columns, rows, selectedCellIndexes) {
+  if (source.width % columns !== 0 || source.height % rows !== 0) {
+    throw new Error(`Generated symbol sheet ${source.width}x${source.height} is not an exact ${columns}x${rows} grid.`);
+  }
+  const cellWidth = source.width / columns;
+  const cellHeight = source.height / rows;
+  const cells = Array.from({ length: columns * rows }, (_, cellIndex) => ({
+    cellIndex,
+    centerX: (cellIndex % columns + 0.5) * cellWidth,
+    centerY: (Math.floor(cellIndex / columns) + 0.5) * cellHeight
+  }));
+  const components = readComponents(source);
+  const distanceToCell = (component, cell) => Math.hypot(component.centerX - cell.centerX, component.centerY - cell.centerY);
+  const anchors = new Map();
+  for (const cell of cells) {
+    const nearestMain = components
+      .filter((component) => component.area >= mainComponentMinArea)
+      .map((component) => ({ component, distance: distanceToCell(component, cell) }))
+      .sort((left, right) => left.distance - right.distance)[0];
+    if (nearestMain && nearestMain.distance < Math.min(cellWidth, cellHeight) * 0.7) {
+      anchors.set(cell.cellIndex, { cell, centerX: nearestMain.component.centerX, centerY: nearestMain.component.centerY });
+    }
+  }
+
+  const grouped = new Map([...anchors.keys()].map((cellIndex) => [cellIndex, []]));
+  for (const component of components) {
+    const owner = [...anchors.values()].reduce((best, anchor) => {
+      const distance = Math.hypot(component.centerX - anchor.centerX, component.centerY - anchor.centerY);
+      return !best || distance < best.distance ? { cellIndex: anchor.cell.cellIndex, distance } : best;
+    }, undefined);
+    if (owner) {
+      const pixels = grouped.get(owner.cellIndex);
+      if (pixels) for (const point of component.points) pixels.push(point);
+    }
+  }
+
+  const cutouts = new Map();
+  for (const cellIndex of selectedCellIndexes) {
+    const points = grouped.get(cellIndex) ?? [];
+    if (points.length < mainComponentMinArea) throw new Error(`Generated symbol sheet cell ${cellIndex} has no complete main image.`);
+    const bounds = points.reduce((value, point) => {
+      const x = point % source.width;
+      const y = Math.floor(point / source.width);
+      return {
+        minX: Math.min(value.minX, x), minY: Math.min(value.minY, y),
+        maxX: Math.max(value.maxX, x), maxY: Math.max(value.maxY, y)
+      };
+    }, { minX: source.width, minY: source.height, maxX: 0, maxY: 0 });
+    if (bounds.minX < 2 || bounds.minY < 2 || bounds.maxX > source.width - 3 || bounds.maxY > source.height - 3) {
+      throw new Error(`Generated symbol ${cellIndex} reaches the outer edge of its source image; its artwork may already be clipped.`);
+    }
+    const padding = 4;
+    const width = bounds.maxX - bounds.minX + 1 + padding * 2;
+    const height = bounds.maxY - bounds.minY + 1 + padding * 2;
+    const cutout = new PNG({ width, height });
+    for (const point of points) {
+      const x = point % source.width;
+      const y = Math.floor(point / source.width);
+      const sourceOffset = point * 4;
+      const targetOffset = ((y - bounds.minY + padding) * width + x - bounds.minX + padding) * 4;
+      source.data.copy(cutout.data, targetOffset, sourceOffset, sourceOffset + 4);
+    }
+    cutouts.set(cellIndex, cutout);
+  }
+  return cutouts;
+}
+
 async function writeImages() {
   const source = PNG.sync.read(await readFile(sourcePath));
   const cellWidth = source.width / 8;
@@ -189,24 +263,38 @@ async function writeImages() {
     };
   });
   const prepared = symbolComponents.map(({ symbolId }) => makeCutout(source, symbolComponents, symbolId));
-  const buffers = prepared.map(({ cutout }) => PNG.sync.write(cutout, { colorType: 6, inputColorType: 6 }));
+  const extraSheet = PNG.sync.read(await readFile(extraSheetPath));
+  const extraThree = PNG.sync.read(await readFile(extraThreePath));
+  const extraSheetCutouts = cutGridCells(extraSheet, 6, 6, extraSheetCells);
+  const extraThreeCutouts = cutGridCells(extraThree, 3, 1, [0, 1, 2]);
+  const extraCutouts = [
+    ...extraSheetCells.map((cell) => extraSheetCutouts.get(cell)),
+    ...[0, 1, 2].map((cell) => extraThreeCutouts.get(cell))
+  ];
+  if (prepared.length !== originalSymbolCount || extraCutouts.length !== totalSymbolCount - originalSymbolCount) {
+    throw new Error(`Expected ${originalSymbolCount} original and ${totalSymbolCount - originalSymbolCount} new images, got ${prepared.length} + ${extraCutouts.length}.`);
+  }
+  const buffers = [
+    ...prepared.map(({ cutout }) => PNG.sync.write(cutout, { colorType: 6, inputColorType: 6 })),
+    ...extraCutouts.map((cutout) => PNG.sync.write(cutout, { colorType: 6, inputColorType: 6 }))
+  ];
   for (const directory of outputDirectories) {
     await mkdir(directory, { recursive: true });
     for (let symbolId = 0; symbolId < buffers.length; symbolId += 1) {
       await writeFile(path.join(directory, `${String(symbolId).padStart(2, "0")}.png`), buffers[symbolId]);
     }
     for (const name of await readdir(directory)) {
-      if (/^\d{2}\.png$/.test(name) && Number.parseInt(name, 10) >= 57) await unlink(path.join(directory, name));
+      if (/^\d{2}\.png$/.test(name) && Number.parseInt(name, 10) >= totalSymbolCount) await unlink(path.join(directory, name));
     }
   }
 
-  console.log(`Prepared 57 individually cut images in ${outputDirectories.length} host/controller asset folders.`);
-  console.log(`Every original symbol pixel is retained; touching artwork is split by nearest symbol center, and each crop has transparent outer padding.`);
+  console.log(`Prepared ${totalSymbolCount} individually cut images in ${outputDirectories.length} host/controller asset folders.`);
+  console.log(`Artwork components are grouped around their symbol centers across cell boundaries, then cropped with transparent padding; duplicate map/cake/ball motifs are excluded.`);
 }
 
 async function verifyImages() {
   for (const directory of outputDirectories) {
-    for (let symbolId = 0; symbolId < 57; symbolId += 1) {
+    for (let symbolId = 0; symbolId < totalSymbolCount; symbolId += 1) {
       const image = PNG.sync.read(await readFile(path.join(directory, `${String(symbolId).padStart(2, "0")}.png`)));
       for (let x = 0; x < image.width; x += 1) {
         if (!isBackground(image.data, x * 4) || !isBackground(image.data, ((image.height - 1) * image.width + x) * 4)) throw new Error(`Unsafe horizontal edge in ${directory}/${symbolId}.png`);
@@ -216,7 +304,7 @@ async function verifyImages() {
       }
     }
   }
-  console.log(`Verified 228 finished images. Every crop edge is transparent or near-white.`);
+  console.log(`Verified ${totalSymbolCount * outputDirectories.length} finished images. Every crop edge is transparent or near-white.`);
 }
 
 if (process.argv.includes("--verify")) await verifyImages();

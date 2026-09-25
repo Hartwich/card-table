@@ -142,7 +142,7 @@ export function renderCardTableHtml(
     : "";
   const feedback = state.rulesetId === "symboljagd" ? state.symboljagdFeedback : undefined;
   const feedbackSymbolId = Number.parseInt(feedback?.symbolId ?? "", 10);
-  const feedbackSymbol = feedback && Number.isInteger(feedbackSymbolId) && feedbackSymbolId >= 0 && feedbackSymbolId < 57
+  const feedbackSymbol = feedback && Number.isInteger(feedbackSymbolId) && feedbackSymbolId >= 0 && feedbackSymbolId < 91
     ? `<div class="ct-symboljagd-feedback" aria-hidden="true"><img class="is-left" src="/card-table/symboljagd-icons/${String(feedbackSymbolId).padStart(2, "0")}.png" alt=""><img class="is-right" src="/card-table/symboljagd-icons/${String(feedbackSymbolId).padStart(2, "0")}.png" alt=""></div>`
     : "";
 
