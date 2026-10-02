@@ -60,7 +60,7 @@ const crownLead = "*";
 
 const copy: Record<SupportedLanguage, Record<string, string>> = {
   de: {
-    intro: "Stichwette: Erst Stiche ansagen, dann spielen. Der Zauberer sticht alles, der Narr nichts.",
+    intro: "Stichwette: Erst Stiche ansagen, dann spielen. Die Krone sticht alles, die Feder nichts.",
     bidPrompt: "Sag deine Stiche an.",
     bidLabel: "Ansage",
     tricks: "Stiche",
@@ -85,7 +85,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     chooseTrump: "Wähle die Trumpffarbe."
   },
   en: {
-    intro: "Trick Bets: bid your tricks first, then play. A wizard beats everything, a fool nothing.",
+    intro: "Trick Bets: bid your tricks first, then play. A crown beats everything, a feather nothing.",
     bidPrompt: "Bid your tricks.",
     bidLabel: "Bid",
     tricks: "Tricks",
@@ -298,8 +298,8 @@ export const trickBetRuleset: CardRuleset = {
           {
             title: "The deck",
             lines: [
-              "Cards numbered 1–13 in four suits, plus four wizards and four fools.",
-              "A wizard beats every other card. A fool always loses."
+              "Cards numbered 1–13 in four suits, plus four crowns and four feathers.",
+              "A crown beats every other card. A feather always loses."
             ]
           },
           {
@@ -307,7 +307,7 @@ export const trickBetRuleset: CardRuleset = {
             lines: [
               "Round 1 deals one card each, round 2 two, and so on. The dealer rotates clockwise; the player to their left bids and leads first.",
               "One card of the remaining pile is turned over: its suit is trump. With no cards remaining, there is no trump.",
-              "A fool means no trump; for a wizard the dealer chooses the trump suit before bidding."
+              "A feather means no trump; for a crown the dealer chooses the trump suit before bidding."
             ]
           },
           {
@@ -321,18 +321,18 @@ export const trickBetRuleset: CardRuleset = {
             title: "Playing a trick",
             lines: [
               "The leader plays any card. Everyone else must follow the suit that was led if they hold it.",
-              "Wizards and fools may always be played, whatever you hold.",
-              "If a fool leads, the first suited card after it sets the suit to follow.",
-              "If a wizard leads, nobody has to follow anything."
+              "Crowns and feathers may always be played, whatever you hold.",
+              "If a feather leads, the first suited card after it sets the suit to follow.",
+              "If a crown leads, nobody has to follow anything."
             ]
           },
           {
             title: "Who wins the trick",
             lines: [
-              "The first wizard played wins immediately.",
+              "The first crown played wins immediately.",
               "Otherwise the highest trump wins.",
               "Without a trump, the highest card of the suit led wins.",
-              "Fools never win — unless everybody plays one, then the first fool takes it.",
+              "Feathers never win — unless everybody plays one, then the first feather takes it.",
               "The winner leads the next trick."
             ]
           },
@@ -356,8 +356,8 @@ export const trickBetRuleset: CardRuleset = {
           {
             title: "Das Blatt",
             lines: [
-              "Zahlenkarten 1–13 in vier Farben, dazu vier Zauberer und vier Narren.",
-              "Der Zauberer sticht jede andere Karte. Der Narr verliert immer."
+              "Zahlenkarten 1–13 in vier Farben, dazu vier Kronen und vier Federn.",
+              "Die Krone sticht jede andere Karte. Die Feder verliert immer."
             ]
           },
           {
@@ -365,7 +365,7 @@ export const trickBetRuleset: CardRuleset = {
             lines: [
               "In Runde 1 bekommt jeder eine Karte, in Runde 2 zwei, und so weiter. Der Geber wechselt im Uhrzeigersinn; links von ihm beginnen Ansagen und Ausspielen.",
               "Eine Karte des Reststapels wird aufgedeckt: ihre Farbe ist Trumpf. Ohne Reststapel gibt es keinen Trumpf.",
-              "Liegt dort ein Narr, gibt es keinen Trumpf; bei einem Zauberer wählt der Geber vor den Ansagen die Trumpffarbe."
+              "Liegt dort eine Feder, gibt es keinen Trumpf; bei einer Krone wählt der Geber vor den Ansagen die Trumpffarbe."
             ]
           },
           {
@@ -379,18 +379,18 @@ export const trickBetRuleset: CardRuleset = {
             title: "Einen Stich spielen",
             lines: [
               "Wer eröffnet, legt eine beliebige Karte. Alle anderen müssen die angespielte Farbe bedienen, wenn sie sie haben.",
-              "Zauberer und Narr dürfen immer gelegt werden, egal was du sonst auf der Hand hast.",
-              "Eröffnet ein Narr, bestimmt die erste Farbkarte danach, was bedient werden muss.",
-              "Eröffnet ein Zauberer, muss niemand bedienen."
+              "Krone und Feder dürfen immer gelegt werden, egal was du sonst auf der Hand hast.",
+              "Eröffnet eine Feder, bestimmt die erste Farbkarte danach, was bedient werden muss.",
+              "Eröffnet eine Krone, muss niemand bedienen."
             ]
           },
           {
             title: "Wer den Stich gewinnt",
             lines: [
-              "Der zuerst gelegte Zauberer gewinnt sofort.",
+              "Die zuerst gelegte Krone gewinnt sofort.",
               "Sonst gewinnt der höchste Trumpf.",
               "Ohne Trumpf gewinnt die höchste Karte der angespielten Farbe.",
-              "Narren gewinnen nie — nur wenn alle eine legen, bekommt der erste Narr den Stich.",
+              "Federn gewinnen nie — nur wenn alle eine legen, bekommt die erste Feder den Stich.",
               "Wer den Stich holt, eröffnet den nächsten."
             ]
           },

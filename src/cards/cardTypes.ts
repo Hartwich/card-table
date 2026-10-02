@@ -80,6 +80,7 @@ export interface CardFace {
   color: CardColor;
   /** Text in der Kartenmitte, z. B. "JOKER". */
   art?: "arcane";
+  imageUrl?: string;
   centerLabel?: string;
   points?: number;
   /** Bildsymbole auf einer Symboljagd-Karte. */

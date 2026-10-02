@@ -214,20 +214,20 @@ const numberRanks: CardRankDefinition[] = Array.from({ length: 20 }, (_, index) 
 /** Sticht jede andere Karte. */
 export const crownRank: CardRankDefinition = {
   id: "crown",
-  label: "Z",
+  label: "K",
   order: 100,
-  centerLabel: "ZAUBERER",
-  symbol: "✦",
+  centerLabel: "KRONE",
+  symbol: "♛",
   color: "yellow"
 };
 
 /** Verliert jeden Stich. */
 export const featherRank: CardRankDefinition = {
   id: "feather",
-  label: "N",
+  label: "F",
   order: 0,
-  centerLabel: "NARR",
-  symbol: "☾",
+  centerLabel: "FEDER",
+  symbol: "❦",
   color: "green"
 };
 

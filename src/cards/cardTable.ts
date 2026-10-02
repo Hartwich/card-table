@@ -316,6 +316,9 @@ export function toCardFace(deck: DeckDefinition, card: CardInstance): CardFace {
     rankLabel: rank?.label ?? card.rankId.toUpperCase(),
     color: suit?.color ?? rank?.color ?? "neutral",
     art: deck.id === "stichwette-60" ? "arcane" : undefined,
+    imageUrl: deck.id === "stichwette-60"
+      ? `/card-table/stichwette/${card.rankId === "crown" || card.rankId === "feather" ? card.rankId : ({ hearts: "flame", diamonds: "star", clubs: "grove", spades: "moon" } as Record<string, string>)[card.suitId ?? ""]}.webp`
+      : undefined,
     centerLabel: rank?.centerLabel ?? (isJoker ? "JOKER" : undefined),
     points: rank?.points,
     symbols: card.tags.filter((tag) => tag.startsWith("sym:")).map((tag) => tag.slice(4))

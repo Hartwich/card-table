@@ -42,6 +42,7 @@ export function cardFaceHtml(
         rankLabel: card.rankLabel,
         color: card.color,
         art: card.art,
+        imageUrl: card.imageUrl,
         centerLabel: card.centerLabel,
         symbols: card.symbols
       },

@@ -164,16 +164,19 @@ export function renderCardFaceSvg(face: CardFace, options: CardSvgOptions = {}):
     ? symboljagdBody(face, width, height)
     : face.art === "arcane" && style !== "clear"
       ? `<g transform="scale(${width / 100} ${height / 140})">
-          <rect x="5" y="5" width="90" height="130" rx="5" fill="${ink}" />
-          <path d="M50 25 80 70 50 115 20 70Z" fill="none" stroke="#ead5a0" stroke-width="1" />
-          <circle cx="50" cy="70" r="27" fill="#fffbf4" stroke="#ead5a0" stroke-width="2" />
-          <circle cx="50" cy="70" r="33" fill="none" stroke="#ead5a0" stroke-dasharray="1 5" />
-          <text x="50" y="82" text-anchor="middle" fill="${ink}" font-size="${face.centerLabel ? 36 : 32}" font-family="${serifStack}" font-weight="700">${escapeXml(face.centerLabel ? face.suitSymbol : face.rankLabel)}</text>
-          <text x="50" y="25" text-anchor="middle" fill="#fffbf4" font-size="16">${escapeXml(face.suitSymbol)}</text>
-          <text x="50" y="124" text-anchor="middle" fill="#fffbf4" font-size="${face.centerLabel ? 9 : 17}" font-family="${sansStack}">${escapeXml(face.centerLabel ?? face.suitSymbol)}</text>
-          <text x="11" y="23" fill="#fffbf4" font-size="16" font-weight="700">${escapeXml(face.rankLabel)}</text>
-          <text x="11" y="38" fill="#fffbf4" font-size="13">${escapeXml(face.suitSymbol)}</text>
-          <g transform="rotate(180 50 70)"><text x="11" y="23" fill="#fffbf4" font-size="16" font-weight="700">${escapeXml(face.rankLabel)}</text><text x="11" y="38" fill="#fffbf4" font-size="13">${escapeXml(face.suitSymbol)}</text></g>
+          <svg x="5" y="5" width="90" height="130" viewBox="0 0 90 130" overflow="hidden">
+            <image href="${escapeXml(face.imageUrl ?? "")}" width="90" height="130" preserveAspectRatio="xMidYMid slice" />
+            <rect width="90" height="130" fill="#102021" opacity="${options.muted ? 0.5 : 0.06}" />
+          </svg>
+          <rect x="6" y="6" width="88" height="128" rx="5" fill="none" stroke="#ead5a0" stroke-width="1" />
+          <g fill="#fffbf4" font-family="${sansStack}" font-weight="700" text-anchor="middle">
+            <rect x="7" y="7" width="24" height="37" rx="5" fill="${palette.ink}" stroke="#ead5a0" stroke-width="0.6" />
+            <text x="19" y="25" font-size="17">${escapeXml(face.rankLabel)}</text>
+            <text x="19" y="39" font-size="13">${escapeXml(face.suitSymbol)}</text>
+            <g transform="rotate(180 50 70)"><rect x="7" y="7" width="24" height="37" rx="5" fill="${palette.ink}" stroke="#ead5a0" stroke-width="0.6" /><text x="19" y="25" font-size="17">${escapeXml(face.rankLabel)}</text><text x="19" y="39" font-size="13">${escapeXml(face.suitSymbol)}</text></g>
+            <rect x="27" y="111" width="46" height="18" rx="4" fill="#102021" fill-opacity="0.88" />
+            <text x="50" y="123" font-size="8">${escapeXml(face.centerLabel ?? face.suitLabel)}</text>
+          </g>
         </g>`
       : style === "modern"
       ? modernBody(face, ink, width, height)
