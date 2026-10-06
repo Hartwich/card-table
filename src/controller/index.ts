@@ -1,4 +1,5 @@
 import type { CardBackStyle, CardColor } from "../cards/cardTypes.js";
+import { symboljagdLayout, type SymboljagdSpot } from "../cards/symboljagdLayout.js";
 import type { CardTableCardStyle } from "../protocol.js";
 import type {
   CardTableActionState,
@@ -26,6 +27,7 @@ type SupportedLanguage = "de" | "en";
 interface CardHandLayoutModel {
   kind: "card_hand";
   isSymboljagd?: boolean;
+  symboljagdPositions?: ReadonlyArray<SymboljagdSpot>;
   symboljagdFeedback?: CardTableControllerState["symboljagdFeedback"];
   isRomme?: boolean;
   title: string;
@@ -96,6 +98,9 @@ export function buildCardTableControllerModel(
     kind: "card_hand",
     isRomme: gameState.rulesetId === "romme",
     isSymboljagd: gameState.rulesetId === "symboljagd",
+    symboljagdPositions: gameState.rulesetId === "symboljagd" && gameState.hand?.[0]
+      ? symboljagdLayout(gameState.hand[0].cardId, gameState.hand[0].symbols?.length ?? 0)
+      : undefined,
     symboljagdFeedback: gameState.symboljagdFeedback,
     title: gameState.title ?? (en ? "Card table" : "Kartentisch"),
     subtitle: gameState.gameOver

@@ -5,8 +5,10 @@ import { finishGame, playerName, type CardGameState, type CardRuleset } from "./
 import type { CardTableStackState } from "../protocol.js";
 
 const centerZone = "symboljagd-center";
-const lastChallengeKey = "symboljagdLastChallenge";
-const lastSolvedAtKey = "symboljagdLastSolvedAt";
+const graceMs = 2_000;
+const wrongAnswerLockMs = 5_000;
+const solvedPrefix = "symboljagdSolved:";
+const solvedKey = (cardId: string) => `${solvedPrefix}${cardId}`;
 const feedbackKeys = {
   playerId: "symboljagdFeedbackPlayerId",
   playerName: "symboljagdFeedbackPlayerName",
@@ -67,7 +69,7 @@ export const symboljagdRuleset: CardRuleset = {
         discardPile: [],
         zones: { ...state.table.zones, [centerZone]: center ? [center] : [], "symboljagd-history": [] }
       },
-      extra: { ...state.extra, symboljagdLastChallenge: "", symboljagdLastSolvedAt: 0 }
+      extra: Object.fromEntries(Object.entries(state.extra).filter(([key]) => !key.startsWith(solvedPrefix)))
     };
   },
   introMessage(context) {
@@ -78,10 +80,10 @@ export const symboljagdRuleset: CardRuleset = {
   rules(context) {
     return context.language === "en" ? [
       { title: "Goal", lines: ["Be the first to play all your cards."] },
-      { title: "How to play", lines: ["Everyone plays at once. Compare your top card with the center card: exactly one picture matches.", "Tap the matching picture directly on your card. A correct answer puts your card in the center and reveals your next card.", "A wrong answer locks you for 7 seconds, or until any player solves the current card.", "If another player solves the card first, a correct or mistaken tap from the old card within 2 seconds is treated as a near-simultaneous attempt and carries no penalty."] }
+      { title: "How to play", lines: ["Everyone plays at once. Compare your top card with the center card: exactly one picture matches.", "Tap the matching picture directly on your card. A correct answer puts your card in the center and reveals your next card.", "A wrong answer locks you for 5 seconds, or until any player solves the current card.", "If another player solves the card first, a matching picture from that previous center card carries no penalty for 2 seconds, even if your phone has already received the new card. Inputs explicitly referring to an old center card are ignored."] }
     ] : [
       { title: "Ziel", lines: ["Lege als Erste oder Erster alle eigenen Karten ab."] },
-      { title: "Ablauf", lines: ["Alle spielen gleichzeitig. Vergleiche deine Karte mit der Karte in der Mitte: Genau ein Bild ist gleich.", "Tippe das passende Bild direkt auf deiner Karte an. Bei einem Treffer kommt deine Karte in die Mitte und deine nächste Karte wird aufgedeckt.", "Ein falscher Tipp sperrt dich 7 Sekunden oder bis jemand die aktuelle Karte löst.", "Löst jemand die Karte zuerst, zählt ein Klick auf die alte Karte innerhalb von 2 Sekunden als nahezu gleichzeitiger Versuch und wird nicht bestraft."] }
+      { title: "Ablauf", lines: ["Alle spielen gleichzeitig. Vergleiche deine Karte mit der Karte in der Mitte: Genau ein Bild ist gleich.", "Tippe das passende Bild direkt auf deiner Karte an. Bei einem Treffer kommt deine Karte in die Mitte und deine nächste Karte wird aufgedeckt.", "Ein falscher Tipp sperrt dich 5 Sekunden oder bis jemand die aktuelle Karte löst.", "Löst jemand die Karte zuerst, wird das passende Bild zur vorherigen Mitte noch 2 Sekunden lang nicht bestraft, auch wenn dein Handy bereits die neue Karte empfangen hat. Eingaben mit einer alten Mittelkarten-ID werden ignoriert."] }
     ];
   },
   canPlayCard(state, context, playerId, cardId) {
@@ -102,15 +104,21 @@ export const symboljagdRuleset: CardRuleset = {
     const ownSymbols = symbols(state, cardId);
     const shared = ownSymbols.filter((symbol) => symbols(state, centerId).includes(symbol));
     const [challengeId, symbolId] = choiceId.split("|");
-    const staleChallenge = challengeId !== centerId;
-    const solvedAt = typeof state.extra[lastSolvedAtKey] === "number" ? state.extra[lastSolvedAtKey] as number : 0;
-    if (staleChallenge) return state.extra[lastChallengeKey] === challengeId && context.now - solvedAt <= 2_000 ? state : state;
+    if (challengeId !== centerId) return state;
     if (blockedUntil(state, playerId) > context.now) return state;
 
     if (!ownSymbols.includes(symbolId!) || shared[0] !== symbolId) {
+      // A phone update can replace the challenge ID before a player finishes
+      // tapping the picture they matched against the previous host card.
+      const recentMatch = ownSymbols.includes(symbolId!) && (state.table.zones["symboljagd-history"] ?? []).some((oldCenterId) => {
+        const solvedAt = state.extra[solvedKey(oldCenterId)];
+        return typeof solvedAt === "number" && context.now >= solvedAt && context.now - solvedAt <= graceMs
+          && symbols(state, oldCenterId).includes(symbolId!);
+      });
+      if (recentMatch) return state;
       return {
         ...state,
-        extra: { ...state.extra, [blockedKey(playerId)]: context.now + 7_000 },
+        extra: { ...state.extra, [blockedKey(playerId)]: context.now + wrongAnswerLockMs },
         updatedAt: context.now,
         message: context.language === "en" ? `${playerName(context, playerId)} picked the wrong picture.` : `${playerName(context, playerId)} hat das falsche Bild gewählt.`
       };
@@ -120,13 +128,15 @@ export const symboljagdRuleset: CardRuleset = {
     table = moveCard(table, cardId, { kind: "zone", zoneId: centerZone });
     const extra: CardGameState["extra"] = {
       ...state.extra,
-      [lastChallengeKey]: centerId,
-      [lastSolvedAtKey]: context.now,
+      [solvedKey(centerId)]: context.now,
       [feedbackKeys.playerId]: playerId,
       [feedbackKeys.playerName]: playerName(context, playerId),
       [feedbackKeys.symbolId]: symbolId,
       [feedbackKeys.occurredAt]: context.now
     };
+    for (const [key, value] of Object.entries(extra)) {
+      if (key.startsWith(solvedPrefix) && typeof value === "number" && context.now - value > graceMs) delete extra[key];
+    }
     for (const id of table.turnOrder) extra[blockedKey(id)] = 0;
     const next = { ...state, table, extra, updatedAt: context.now, message: `${playerName(context, playerId)}: ${names[Number(symbolId)] ?? symbolId}` };
     const remaining = handOf(table, playerId).length;

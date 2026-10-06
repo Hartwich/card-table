@@ -1,4 +1,5 @@
 import { cardColorPalette, type CardBackStyle, type CardFace } from "./cardTypes.js";
+import { symboljagdLayout } from "./symboljagdLayout.js";
 
 /**
  * Kartenbilder als SVG.
@@ -135,19 +136,17 @@ function clearBody(face: CardFace, ink: string, width: number, height: number): 
 }
 
 function symboljagdBody(face: CardFace, width: number, height: number): string {
-  const positions: Array<[number, number, number]> = [[22, 15, 23], [75, 17, 19], [49, 40, 37], [19, 62, 20], [80, 61, 30], [43, 87, 20], [74, 114, 20], [22, 127, 20], [49, 11, 16], [49, 108, 17]];
-  const layoutCount = Math.min(face.symbols?.length ?? positions.length, positions.length);
-  const seed = [...face.cardId].reduce((value, char) => value + char.charCodeAt(0), 0) % layoutCount;
+  const positions = symboljagdLayout(face.cardId, face.symbols?.length ?? 0);
   const icons = (face.symbols ?? []).map((symbol, index) => {
-    const [cx, cy, size] = positions[(index + seed) % layoutCount]!;
+    const [cx, cy, size] = positions[index]!;
     const cell = Math.max(0, Math.min(90, Number.parseInt(symbol, 10) || 0));
-    const left = (cx - size / 2) * width / 100;
-    const top = (cy - size / 2) * height / 140;
-    const edge = size * width / 100;
+    const edge = size * Math.min(width, height) / 100;
+    const left = cx * width / 100 - edge / 2;
+    const top = cy * height / 100 - edge / 2;
     const filename = String(cell).padStart(2, "0");
     return `<image href="/card-table/symboljagd-icons/${filename}.png" x="${left}" y="${top}" width="${edge}" height="${edge}" preserveAspectRatio="xMidYMid meet" />`;
   }).join("");
-  return `<rect x="5" y="5" width="90" height="130" rx="6" fill="#fffbf4" />${icons}`;
+  return icons;
 }
 
 /** Rendert eine Spielkarte als eigenständiges SVG-Dokument. */

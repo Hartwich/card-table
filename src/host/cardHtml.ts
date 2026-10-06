@@ -20,10 +20,10 @@ export function escapeHtml(value: string): string {
 }
 
 /** Setzt die Anzeigegröße, ohne das gerenderte SVG neu zu bauen. */
-function sized(svg: string, width: number): string {
+function sized(svg: string, width: number, ratio = 1.4): string {
   return svg.replace(
     "<svg ",
-    `<svg style="width:${width}px;height:${Math.round(width * 1.4)}px;display:block" `
+    `<svg style="width:${width}px;height:${Math.round(width * ratio)}px;display:block" `
   );
 }
 
@@ -32,6 +32,7 @@ export function cardFaceHtml(
   width: number,
   style: CardArtStyle = "classic"
 ): string {
+  const ratio = (card.symbols?.length ?? 0) >= 8 ? 1 : 1.4;
   return sized(
     renderCardFaceSvg(
       {
@@ -46,9 +47,10 @@ export function cardFaceHtml(
         centerLabel: card.centerLabel,
         symbols: card.symbols
       },
-      { width: 200, height: 280, style }
+      { width: 200, height: 200 * ratio, style }
     ),
-    width
+    width,
+    ratio
   );
 }
 

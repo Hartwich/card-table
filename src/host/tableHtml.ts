@@ -1,5 +1,5 @@
 import type { CardTableActionState, CardTablePublicState, CardTableSeatState } from "../protocol.js";
-import { cardBackHtml, escapeHtml, stackHtml } from "./cardHtml.js";
+import { cardBackHtml, cardFaceHtml, escapeHtml, stackHtml } from "./cardHtml.js";
 
 /**
  * Der Spieltisch als HTML.
@@ -157,7 +157,9 @@ export function renderCardTableHtml(
       </div>
     </header>
     <div class="ct-seats">${state.seats.map((seat) => seatHtml(seat, state.backStyle, text.bot, feedback?.playerId)).join("")}</div>
-    <div class="ct-stacks" style="--ct-center-card-width:${cardWidth}px">${stacks.map((stack) => stackHtml(stack, state.backStyle, state.rulesetId === "zahlenreihe" ? (stack.kind === "draw" ? 48 : 108) : cardWidth, state.cardStyle)).join("")}${feedbackSymbol}</div>
+    <div class="ct-stacks" style="--ct-center-card-width:${cardWidth}px">${stacks.map((stack) => state.rulesetId === "symboljagd" && stack.cards[0]
+      ? `<div class="ct-stack" data-stack="${escapeHtml(stack.id)}"><div class="ct-symboljagd-card">${cardFaceHtml(stack.cards[0], 600, state.cardStyle)}</div><span class="ct-stack-label">${escapeHtml(stack.label)}<b>${stack.count}</b></span></div>`
+      : stackHtml(stack, state.backStyle, state.rulesetId === "zahlenreihe" ? (stack.kind === "draw" ? 48 : 108) : cardWidth, state.cardStyle)).join("")}${feedbackSymbol}</div>
     <footer class="ct-actions">${state.hostActions.map(actionHtml).join("")}</footer>
   </div>
   ${options.rulesOpen ? rulesHtml(state, language) : ""}`;
@@ -212,6 +214,11 @@ export const cardTableStyles = `
 .ct-seat-hand{display:flex;flex:0 0 auto}
 .ct-mini{display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
 .ct-stacks{position:relative;display:flex;align-items:center;justify-content:center;gap:clamp(18px,3.4vw,52px);flex-wrap:wrap}
+.is-symboljagd .ct-stacks{min-height:0;container-type:size;--ct-center-card-width:min(640px,calc(100cqw - 32px),calc(100cqh - 46px)) !important}
+.ct-symboljagd-card{width:var(--ct-center-card-width);aspect-ratio:1;filter:drop-shadow(0 10px 18px rgba(0,0,0,.35))}
+.ct-symboljagd-card svg{width:100% !important;height:100% !important}
+.is-symboljagd .ct-seat{min-width:145px;padding:5px 9px}
+.is-symboljagd .ct-seat-hand{display:none}
 .ct-symboljagd-feedback{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible}
 .ct-symboljagd-feedback img{position:absolute;top:50%;width:clamp(76px,10vw,128px);height:auto;transform:translateY(-50%);filter:drop-shadow(0 9px 12px rgba(0,0,0,.38));animation:ct-symboljagd-pop 1.45s cubic-bezier(.2,.75,.3,1) both}
 .ct-symboljagd-feedback img.is-left{left:calc(50% - var(--ct-center-card-width, 280px)/2 - clamp(76px,10vw,128px) - 18px)}
