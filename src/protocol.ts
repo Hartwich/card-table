@@ -133,7 +133,12 @@ export interface CardTableLogEntryState {
 
 export type CardTableCardStyle = "classic" | "modern" | "clear";
 
-export interface CardTablePublicState {
+export interface CardTableSymboljagdResultState {
+  /** Frozen completion time for a solo round, excluding pauses. */
+  symboljagdSoloTimeMs?: number;
+}
+
+export interface CardTablePublicState extends CardTableSymboljagdResultState {
   /** Aktives Regelwerk, z. B. "free-play" oder "mau-mau". */
   rulesetId: string;
   title: string;
@@ -177,7 +182,12 @@ export interface CardTablePublicState {
   scoreBreakdown?: string[];
 }
 
-export interface CardTableControllerState extends CardTablePublicState {
+export interface CardTableHandDisplayState {
+  /** Visual help only; the server still enforces card legality. */
+  dimUnplayable?: boolean;
+}
+
+export interface CardTableControllerState extends CardTablePublicState, CardTableHandDisplayState {
   hand: CardTableHandCardState[];
   canAct: boolean;
   actions: CardTableActionState[];
@@ -221,6 +231,13 @@ export interface CardTableConfigureLobbyAction {
   botCount?: number;
   doppelkopfScoring?: string;
   handSort?: string;
+  dimUnplayable?: string;
+  mauStackSevens?: string;
+  mauSkipEights?: string;
+  mauReverseNines?: string;
+  mauJackOnJack?: string;
+  mauPlayDrawn?: string;
+  mauPlayPenaltyDrawn?: string;
   dokoNines?: string;
   dokoSecondDulle?: string;
   dokoDoppelkopf?: string;

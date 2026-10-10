@@ -19,6 +19,13 @@ export const cardTableRoomSettingKeys = {
   botCount: "cardTableBotCount",
   doppelkopfScoring: "cardTableDoppelkopfScoring",
   handSort: "cardTableHandSort",
+  dimUnplayable: "cardTableDimUnplayable",
+  mauStackSevens: "cardTableMauStackSevens",
+  mauSkipEights: "cardTableMauSkipEights",
+  mauReverseNines: "cardTableMauReverseNines",
+  mauJackOnJack: "cardTableMauJackOnJack",
+  mauPlayDrawn: "cardTableMauPlayDrawn",
+  mauPlayPenaltyDrawn: "cardTableMauPlayPenaltyDrawn",
   dokoNines: "cardTableDokoNines",
   dokoSecondDulle: "cardTableDokoSecondDulle",
   dokoDoppelkopf: "cardTableDokoDoppelkopf",
@@ -29,7 +36,9 @@ export const cardTableRoomSettingKeys = {
   dokoAgainstOld: "cardTableDokoAgainstOld",
   dokoBock: "cardTableDokoBock",
   dokoForced: "cardTableDokoForced",
-  symboljagdSymbolsPerCard: "cardTableSymboljagdSymbolsPerCard"
+  symboljagdSymbolsPerCard: "cardTableSymboljagdSymbolsPerCard",
+  symboljagdDealMode: "cardTableSymboljagdDealMode",
+  symboljagdCardTarget: "cardTableSymboljagdCardTarget"
 } as const;
 
 export const cardTableManifest = {
@@ -131,7 +140,7 @@ export const cardTableManifest = {
           {
             id: "symboljagd",
             label: "Symboljagd",
-            description: "Finde das eine gemeinsame Bildsymbol zwischen deiner obersten Karte und der Mitte. Ein falscher Tipp sperrt dich kurz.",
+            description: "Finde das gemeinsame Bildsymbol zwischen deiner Karte und der Mitte. Allein ohne KI spielst du gegen die Zeit. Ein falscher Tipp sperrt dich kurz.",
           },
           {
             id: "free-play",
@@ -154,6 +163,29 @@ export const cardTableManifest = {
           { id: "9", label: "9 Symbole · Anspruchsvoll", description: "73 Motive und 73 Karten." },
           { id: "10", label: "10 Symbole · Profi", description: "91 Motive und 91 Karten." }
         ]
+      },
+      {
+        kind: "select",
+        id: "symboljagdDealMode",
+        settingKey: cardTableRoomSettingKeys.symboljagdDealMode,
+        actionKey: "symboljagdDealMode",
+        label: "Kartenpensum",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["symboljagd"] },
+        defaultValue: "all",
+        options: [
+          { id: "all", label: "Alle Karten", description: "Den ganzen Kartensatz wie bisher verteilen." },
+          { id: "fixed", label: "Feste Anzahl pro Person", description: "Alle spielen bis zur gleichen Zielanzahl. Alte Karten werden wieder untergemischt." }
+        ]
+      },
+      {
+        kind: "number",
+        id: "symboljagdCardTarget",
+        settingKey: cardTableRoomSettingKeys.symboljagdCardTarget,
+        actionKey: "symboljagdCardTarget",
+        label: "Karten pro Person",
+        description: "Zielanzahl bei festem Kartenpensum; bei Alle Karten gilt der ganze Kartensatz.",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["symboljagd"] },
+        min: 1, max: 300, step: 1, defaultValue: 30
       },
       {
         kind: "select",
@@ -196,6 +228,37 @@ export const cardTableManifest = {
         step: 1,
         defaultValue: 5
       },
+      {
+        kind: "toggle",
+        id: "dimUnplayable",
+        settingKey: cardTableRoomSettingKeys.dimUnplayable,
+        actionKey: "dimUnplayable",
+        label: "Unspielbare Karten ausgrauen",
+        description: "Hebt passende Karten auf dem Handy hervor. Ausgeschaltet bleiben alle Karten normal sichtbar; die Spielregeln gelten weiterhin.",
+        onValue: "on",
+        offValue: "off",
+        defaultValue: "on"
+      },
+      ...([
+        ["mauStackSevens", "Siebenen stapeln", "Eine Sieben gibt die aufgelaufenen Strafkarten an den Nächsten weiter."],
+        ["mauSkipEights", "Acht setzt aus", "Nach einer Acht wird der nächste Spieler übersprungen."],
+        ["mauReverseNines", "Neun dreht die Richtung", "Nach einer Neun wechselt die Spielrichtung. Zu zweit setzt der andere Spieler aus."],
+        ["mauJackOnJack", "Bube auf Bube", "Buben und Joker dürfen auch auf andere Buben oder Joker gelegt werden."],
+        ["mauPlayDrawn", "Gezogene Karte sofort legen", "Beim normalen Ziehen darf die gezogene Karte sofort gelegt werden. Für Strafkarten gilt die separate Option."],
+        ["mauPlayPenaltyDrawn", "Nach Strafziehen sofort legen", "Nach +2, +4 usw. darf eine passende Karte aus den gerade gezogenen Strafkarten gelegt werden. Alte Handkarten bleiben gesperrt."]
+      ] as const).map(([id, label, description]) => ({
+        kind: "toggle" as const,
+        id,
+        settingKey: cardTableRoomSettingKeys[id],
+        actionKey: id,
+        label,
+        description,
+        group: "Mau-Mau-Hausregeln",
+        visibleWhen: { field: cardTableRoomSettingKeys.ruleset, anyOf: ["mau-mau"] },
+        onValue: "on",
+        offValue: "off",
+        defaultValue: id === "mauPlayPenaltyDrawn" ? "off" : "on"
+      })),
       {
         kind: "toggle",
         id: "handSort",

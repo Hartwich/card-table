@@ -139,6 +139,8 @@ export interface CardRuleset {
    * Zahl vorher von Hand einzustellen. Ohne Angabe gelten zwei Sitze.
    */
   minSeats?: number;
+  /** Remaining card objective when physical hand size does not represent progress. */
+  remainingCards?(state: CardGameState, playerId: string): number;
   /** Schränkt die Deckauswahl ein, wenn mehrere Decks passen. */
   allowedDeckIds?: string[];
   /** Handkarten dieser Runde, z. B. steigend wie bei der Stichwette. */

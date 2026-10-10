@@ -214,14 +214,14 @@ export const cardTableStyles = `
 .ct-seat-hand{display:flex;flex:0 0 auto}
 .ct-mini{display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
 .ct-stacks{position:relative;display:flex;align-items:center;justify-content:center;gap:clamp(18px,3.4vw,52px);flex-wrap:wrap}
-.is-symboljagd .ct-stacks{min-height:0;container-type:size;--ct-center-card-width:min(640px,calc(100cqw - 32px),calc(100cqh - 46px)) !important}
+.is-symboljagd .ct-stacks{min-height:0;container-type:size;--ct-center-card-width:min(640px,calc(70cqw - 48px),calc(100cqh - 46px)) !important}
 .ct-symboljagd-card{width:var(--ct-center-card-width);aspect-ratio:1;filter:drop-shadow(0 10px 18px rgba(0,0,0,.35))}
 .ct-symboljagd-card svg{width:100% !important;height:100% !important}
 .is-symboljagd .ct-seat{min-width:145px;padding:5px 9px}
 .is-symboljagd .ct-seat-hand{display:none}
-.ct-symboljagd-feedback{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible}
-.ct-symboljagd-feedback img{position:absolute;top:50%;width:clamp(76px,10vw,128px);height:auto;transform:translateY(-50%);filter:drop-shadow(0 9px 12px rgba(0,0,0,.38));animation:ct-symboljagd-pop 1.45s cubic-bezier(.2,.75,.3,1) both}
-.ct-symboljagd-feedback img.is-left{left:calc(50% - var(--ct-center-card-width, 280px)/2 - clamp(76px,10vw,128px) - 18px)}
+.ct-symboljagd-feedback{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible;--ct-hit-size:min(clamp(108px,14vw,184px),max(24px,calc((100cqw - var(--ct-center-card-width,280px))/2 - 24px)))}
+.ct-symboljagd-feedback img{position:absolute;top:50%;width:var(--ct-hit-size);height:auto;transform:translateY(-50%);filter:drop-shadow(0 9px 12px rgba(0,0,0,.38));animation:ct-symboljagd-pop 1.45s cubic-bezier(.2,.75,.3,1) both}
+.ct-symboljagd-feedback img.is-left{left:calc(50% - var(--ct-center-card-width, 280px)/2 - var(--ct-hit-size) - 18px)}
 .ct-symboljagd-feedback img.is-right{left:calc(50% + var(--ct-center-card-width, 280px)/2 + 18px)}
 @keyframes ct-symboljagd-pop{0%{opacity:0;scale:.48;rotate:-14deg}18%{opacity:1;scale:1.08;rotate:0deg}65%{opacity:1;scale:1}100%{opacity:0;scale:.84;translate:0 -12px}}
 .is-number-rows .ct-stacks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-content:center}

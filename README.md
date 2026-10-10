@@ -17,7 +17,7 @@ Handy und austauschbare Regelwerke.
 | **Fischen** | Einen Mitspieler nach einem Wert fragen. Vier gleiche wandern als Satz auf den Tisch, sonst wird gefischt. | Auswahl eines Mitspielers, Auslagen als eigene Zonen |
 | **Herzeln** | Stiche vermeiden: jedes Herz zählt 1, die Pik-Dame 13. Farbe bedienen, Herz erst nach dem Bruch. Alle Strafpunkte auf einmal drehen die Wertung um. | Bedienzwang, negative Wertung, Sonderregel über die ganze Runde |
 | **Rommé** | Zwei Doppelblätter plus vier Joker. 13 Karten, 40 Augen zur Erstauslage, danach Kombinationen erweitern und die letzte Handkarte abwerfen. | Satz- und Folgenprüfung, verdeckte Hand und gemeinsame Auslagen, Serienwertung |
-| **Symboljagd** | Vergleiche die oberste eigene Karte mit der Mitte: Genau ein Bild ist gleich. Tippe das passende Motiv, um deine Karte abzulegen. | 8 Symbole pro Karte als Standard; im Setup auch 9 oder 10 wählbar. Die passenden Sets enthalten 57, 73 oder 91 eindeutige Bildmotive und garantieren genau ein gemeinsames Symbol je Kartenpaar. Echtzeitspiel, 5-Sekunden-Sperre bei Fehlklick und 2-Sekunden-Nachsicht bei nahezu gleichzeitigen Treffern |
+| **Symboljagd** | Vergleiche die oberste eigene Karte mit der Mitte: Genau ein Bild ist gleich. Tippe das passende Motiv, um deine Karte abzulegen. | Kartenpensum: ganzer Kartensatz oder feste 1–300 Karten pro Person (Standardziel 30), mit wieder untergemischten alten Mittelkarten und gleichen Zielen. 8 Symbole pro Karte als Standard; im Setup auch 9 oder 10 wählbar. Die passenden Sets enthalten 57, 73 oder 91 eindeutige Bildmotive und garantieren genau ein gemeinsames Symbol je Kartenpaar. Solo ohne KI mit Abschlusszeit auf Host und Handy (Pausen ausgenommen, Fehlklick-Sperren inklusive) oder Echtzeitspiel mit mehreren Personen, 5-Sekunden-Sperre bei Fehlklick und 2-Sekunden-Nachsicht bei nahezu gleichzeitigen Treffern |
 | **Doppelkopf** | Jede Karte doppelt. Karo, alle Damen, alle Buben und die Herz-Zehn sind Trumpf. Die Kreuz-Damen bilden Re gegen Kontra. | Verdeckte Parteien, Trumpfordnung quer zu den Farben, Wertung nach Augen, wahlweise erst am Ende ausgezählt |
 | **Freies Spiel** | Offener Tisch ohne Regeln: ziehen, ablegen, Zug von Hand weitergeben. | Vorlage für neue Regelwerke |
 
@@ -207,6 +207,22 @@ nicht erst gezeigt.
 | Augen zählen | nur Doppelkopf: laufend oder erst am Ende |
 | KI-Spieler (0–5) | immer |
 | Kartenbild | immer — Klassisch, Modern, Klar |
+| Unspielbare Karten ausgrauen | immer — standardmäßig an; ausgeschaltet bleiben die Regeln unverändert |
+| Mau-Mau-Hausregeln | nur Mau-Mau: Siebenen stapeln, Acht setzt aus, Neun dreht, Bube auf Bube und gezogene Karte sofort legen (jeweils standardmäßig an) |
+| Nach Strafziehen sofort legen | nur Mau-Mau — standardmäßig aus, unabhängig vom normalen Ziehen |
+| Symboljagd: Symbole / Kartenpensum | nur Symboljagd — 8, 9 oder 10 Symbole; ganzer Kartensatz (Standard) oder feste Zielanzahl |
+| Symboljagd: Karten pro Person | nur Symboljagd — 1–300, Standard 30; wirkt nur bei festem Kartenpensum |
+
+Bei aktivem **Nach Strafziehen sofort legen** darf nach +2 oder gestapelten
++4/+6 genau eine passende Karte aus den gerade gezogenen Strafkarten gelegt
+werden. Alte Handkarten bleiben gesperrt. Alternativ ist Passen möglich; passt
+keine neue Karte, endet der Zug automatisch. Die eingeblendeten deutschen und
+englischen Regeln berücksichtigen die gewählten Hausregeln.
+
+Symboljagd kann eine Person ohne KI spielen. Die Abschlusszeit wird auf dem Server
+gemessen und auf Host und Handy eingefroren angezeigt: Pausen zählen nicht,
+Fehlklick-Sperren zählen mit. Beim festen Kartenpensum erhalten alle dieselbe
+Zielanzahl; verbrauchte Mittelkarten werden bei Bedarf wieder untergemischt.
 
 Möglich macht das `visibleWhen` im `lobbySetup` der Plattform: Ein Feld nennt
 das Feld, von dem es abhängt, und die Werte, bei denen es erscheint. Host und
@@ -222,6 +238,7 @@ Runde beenden.
 npm install
 npm run typecheck
 npm run build
+npm test
 ```
 
 Danach im Plattform-Repo:

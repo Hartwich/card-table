@@ -29,8 +29,8 @@ import {
  *
  * Referenz-Regelwerk auf dem Kartentisch: Sieben zieht zwei (stapelbar), Acht
  * setzt aus, Neun dreht die Richtung, der Bube (bzw. der Wild-Rang des Decks)
- * wünscht sich eine Farbe. Die Sonderränge stehen bewusst als Konstanten hier,
- * damit Hausregeln ohne Eingriff in die Engine änderbar sind.
+ * wünscht sich eine Farbe. Die Lobby schaltet die Hausregeln unabhängig um;
+ * die Sonderränge stehen als gemeinsame Konstanten für Regeln und KI hier.
  */
 
 export const mauMauRules = {
@@ -42,7 +42,6 @@ export const mauMauRules = {
 
 const copy: Record<SupportedLanguage, Record<string, string>> = {
   de: {
-    intro: "Mau-Mau: Farbe oder Wert bedienen. 7 zieht zwei, 8 setzt aus, 9 dreht um, Bube wünscht.",
     draw: "Ziehen",
     pass: "Weiter",
     recycle: "Ablage mischen",
@@ -67,11 +66,10 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     mau: "Mau!",
     wins: "gewinnt die Runde.",
     exhausted: "Es sind keine Karten mehr im Stapel.",
-    onlyDrawn: "Nach dem Ziehen darfst du nur die gezogene Karte legen.",
+    onlyDrawn: "Nach dem Ziehen darfst du nur eine gerade gezogene Karte legen.",
     blocked: "Niemand kann mehr ziehen oder legen. Die Runde endet ohne Sieger."
   },
   en: {
-    intro: "Mau Mau: match suit or rank. 7 draws two, 8 skips, 9 reverses, the jack wishes a suit.",
     draw: "Draw",
     pass: "Pass",
     recycle: "Reshuffle pile",
@@ -96,13 +94,16 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     mau: "Mau!",
     wins: "wins the round.",
     exhausted: "No cards left in the pile.",
-    onlyDrawn: "After drawing, you may only play the card you just drew.",
+    onlyDrawn: "After drawing, you may only play a card you just drew.",
     blocked: "Nobody can draw or play. The round ends without a winner."
   }
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
   return copy[context.language] ?? copy.de;
+}
+function optionOn(context: CardRulesetContext, option: "StackSevens" | "SkipEights" | "ReverseNines" | "JackOnJack" | "PlayDrawn"): boolean {
+  return context.settings[`cardTableMau${option}`] !== "off";
 }
 function wildRankIds(deck: DeckDefinition): string[] {
   return deck.wildRankIds ?? ["jack"];
@@ -151,6 +152,7 @@ export const mauMauRuleset: CardRuleset = {
 
   rules(context) {
     const en = context.language === "en";
+    const playPenaltyDrawn = context.settings.cardTableMauPlayPenaltyDrawn === "on";
 
     return en
       ? [
@@ -162,17 +164,17 @@ export const mauMauRuleset: CardRuleset = {
             title: "Playing a card",
             lines: [
               "Your card has to match the top card of the pile in suit or in rank.",
-              "A jack may always be played, whatever is lying there.",
+              optionOn(context, "JackOnJack") ? "A jack may always be played, except during a seven penalty." : "A jack may be played on any non-wild card, except during a seven penalty. No jack or joker on another jack or joker.",
               "With a joker deck, jokers work like jacks."
             ]
           },
           {
             title: "Special cards",
             lines: [
-              "7 — the next player draws two. Sevens stack: play one on top and the whole penalty moves on.",
-              "8 — the next player is skipped.",
-              "9 — the direction of play reverses. With two players it works like a skip.",
-              "Jack — you name a suit for the next card; another jack is also allowed.",
+              optionOn(context, "StackSevens") ? "7 — the next player draws two. Sevens stack and pass on the whole penalty." : "7 — the next player must draw two. Sevens cannot be stacked.",
+              optionOn(context, "SkipEights") ? "8 — the next player is skipped." : "8 — an ordinary card, without a special effect.",
+              optionOn(context, "ReverseNines") ? "9 — reverses the direction. With two players it works like a skip." : "9 — an ordinary card, without a special effect.",
+              "Jack — name a suit for the next card.",
               "The opening card has no special effect. An opening joker accepts any card."
             ]
           },
@@ -180,9 +182,10 @@ export const mauMauRuleset: CardRuleset = {
             title: "If you cannot or will not play",
             lines: [
               "Draw exactly one card.",
-              "Does it fit? Then you may play it right away — or keep it and pass.",
+              optionOn(context, "PlayDrawn") ? "If the drawn card fits, play it immediately or keep it and pass. Only the drawn card may be played." : "Keep the drawn card; your turn ends immediately.",
               "Does it not fit? The turn passes on.",
-              "Facing a stack of sevens you have to play a seven or take all the penalty cards."
+              optionOn(context, "StackSevens") ? "Facing sevens, play a seven or draw all penalty cards." : "Facing a seven, draw the penalty cards.",
+              playPenaltyDrawn ? "After drawing a penalty (+2, +4, etc.), you may play one matching card from those just drawn, or keep them and pass. Old hand cards cannot be played. If none fits, your turn ends." : "After drawing penalty cards, your turn always ends, even if one fits."
             ]
           },
           {
@@ -190,14 +193,14 @@ export const mauMauRuleset: CardRuleset = {
             lines: [
               "The first player with an empty hand wins the round and scores one point.",
               "An empty draw pile is refilled from the discard pile, keeping the top card.",
-              "If there are still no cards, draw as many as possible and pass. If nobody can draw or play, the round ends without a winner."
+              "If there are still not enough cards, draw as many as possible; the selected drawing rules apply. If nobody can draw or play, the round ends without a winner."
             ]
           },
           {
             title: "On your phone",
             lines: [
               "Tap a card to pick it up, tap again to play it — or use Play.",
-              "Greyed-out cards do not fit; the reason is shown next to the buttons.",
+              "If greying out is enabled in setup, unplayable cards are dimmed; their reason appears next to the buttons.",
               "Draw takes a card, Pass hands over once you have drawn."
             ]
           }
@@ -211,17 +214,17 @@ export const mauMauRuleset: CardRuleset = {
             title: "Anlegen",
             lines: [
               "Deine Karte muss die Farbe oder den Wert der obersten Ablagekarte treffen.",
-              "Ein Bube darf immer gelegt werden, egal was oben liegt.",
+              optionOn(context, "JackOnJack") ? "Ein Bube passt auf jede Karte, außer während einer Sieben-Strafe." : "Ein Bube passt auf jede normale Karte, außer während einer Sieben-Strafe. Kein Bube oder Joker auf einen anderen Buben oder Joker.",
               "Im Blatt mit Jokern wirken die Joker wie Buben."
             ]
           },
           {
             title: "Sonderkarten",
             lines: [
-              "7 — der Nächste zieht zwei. Siebenen stapeln sich: Wer eine drauflegt, gibt die ganze Strafe weiter.",
-              "8 — der Nächste setzt aus.",
-              "9 — die Spielrichtung dreht sich. Zu zweit wirkt sie wie Aussetzen.",
-              "Bube — du wünschst dir die Farbe der nächsten Karte; ein weiterer Bube ist ebenfalls erlaubt.",
+              optionOn(context, "StackSevens") ? "7 — der Nächste zieht zwei. Siebenen stapeln sich und geben die ganze Strafe weiter." : "7 — der Nächste zieht zwei. Siebenen dürfen nicht gestapelt werden.",
+              optionOn(context, "SkipEights") ? "8 — der Nächste setzt aus." : "8 — eine normale Karte ohne Sonderwirkung.",
+              optionOn(context, "ReverseNines") ? "9 — die Spielrichtung dreht sich. Zu zweit wirkt sie wie Aussetzen." : "9 — eine normale Karte ohne Sonderwirkung.",
+              "Bube — du wünschst dir die Farbe der nächsten Karte.",
               "Die Startkarte hat keine Sonderwirkung. Auf einen Start-Joker passt jede Karte."
             ]
           },
@@ -229,9 +232,10 @@ export const mauMauRuleset: CardRuleset = {
             title: "Wenn nichts passt",
             lines: [
               "Zieh genau eine Karte.",
-              "Passt sie, darfst du sie sofort legen — oder behalten und abgeben.",
+              optionOn(context, "PlayDrawn") ? "Passt die gezogene Karte, darfst du nur sie sofort legen — oder behalten und abgeben." : "Du behältst die gezogene Karte; dein Zug endet sofort.",
               "Passt sie nicht, ist der Nächste dran.",
-              "Liegt ein Sieben-Angriff an, musst du eine Sieben legen oder alle Strafkarten ziehen."
+              optionOn(context, "StackSevens") ? "Liegt ein Sieben-Angriff an, lege eine Sieben oder ziehe alle Strafkarten." : "Liegt eine Sieben-Strafe an, ziehe die Strafkarten.",
+              playPenaltyDrawn ? "Nach Strafziehen (+2, +4 usw.) darfst du eine passende Karte aus den gerade gezogenen Karten legen oder alle behalten und abgeben. Alte Handkarten sind gesperrt. Passt keine, endet dein Zug." : "Nach dem Ziehen von Strafkarten endet dein Zug immer, auch wenn eine davon passt."
             ]
           },
           {
@@ -239,14 +243,14 @@ export const mauMauRuleset: CardRuleset = {
             lines: [
               "Wer zuerst keine Karte mehr hat, gewinnt die Runde und bekommt einen Punkt.",
               "Ist der Nachziehstapel leer, wird die Ablage bis auf die oberste Karte neu gemischt.",
-              "Fehlen weiterhin Karten, ziehst du so viele wie möglich und gibst ab. Kann niemand mehr ziehen oder legen, endet die Runde ohne Sieger."
+              "Fehlen weiterhin Karten, ziehst du so viele wie möglich; danach gelten die gewählten Ziehregeln. Kann niemand mehr ziehen oder legen, endet die Runde ohne Sieger."
             ]
           },
           {
             title: "Am Handy",
             lines: [
               "Karte antippen wählt sie aus, zweites Tippen legt sie — oder du nimmst „Legen“.",
-              "Ausgegraute Karten passen nicht; der Grund steht neben den Buttons.",
+              "Ist Ausgrauen in den Einstellungen aktiviert, werden unspielbare Karten abgedunkelt; der Grund steht neben den Buttons.",
               "„Ziehen“ nimmt eine Karte, „Weiter“ gibt ab, nachdem du gezogen hast."
             ]
           }
@@ -254,7 +258,9 @@ export const mauMauRuleset: CardRuleset = {
   },
 
   introMessage(context) {
-    return words(context).intro as string;
+    return context.language === "en"
+      ? "Mau Mau: match suit or rank. The selected house rules are shown in the rules."
+      : "Mau-Mau: Farbe oder Wert bedienen. Die gewählten Hausregeln stehen in den Spielregeln.";
   },
 
   canPlayCard(state, context, playerId, cardId): CardPlayCheck {
@@ -275,17 +281,26 @@ export const mauMauRuleset: CardRuleset = {
       return { allowed: false };
     }
 
-    if (state.drawnThisTurn > 0 && state.extra.mauDrawnCardId !== cardId) {
-      return { allowed: false, hint: text.onlyDrawn as string };
+    if (state.drawnThisTurn > 0) {
+      // extra is restricted to primitives; keep the server-owned list as JSON.
+      const drawnCardIds: string[] = typeof state.extra.mauDrawnCardIds === "string"
+        ? JSON.parse(state.extra.mauDrawnCardIds) as string[]
+        : typeof state.extra.mauDrawnCardId === "string" ? [state.extra.mauDrawnCardId] : [];
+      if (!drawnCardIds.includes(cardId)) {
+        return { allowed: false, hint: text.onlyDrawn as string };
+      }
     }
 
     if (state.pendingDraw > 0) {
-      return mauMauRules.drawTwoRankIds.includes(card.rankId as never)
+      return optionOn(context, "StackSevens") && mauMauRules.drawTwoRankIds.includes(card.rankId as never)
         ? { allowed: true }
-        : { allowed: false, hint: text.mustSeven as string };
+        : { allowed: false, hint: optionOn(context, "StackSevens") ? text.mustSeven as string : context.language === "en" ? "Draw the penalty cards." : "Ziehe die Strafkarten." };
     }
 
     if (isWild(context.deck, card)) {
+      if (!optionOn(context, "JackOnJack") && isWild(context.deck, top)) {
+        return { allowed: false, hint: context.language === "en" ? "No jack or joker on another jack or joker." : "Kein Bube oder Joker auf einen Buben oder Joker." };
+      }
       return { allowed: true };
     }
 
@@ -337,10 +352,10 @@ export const mauMauRuleset: CardRuleset = {
       pendingDraw += mauMauRules.drawTwoAmount;
       logText = `${logText} (+${pendingDraw})`;
       table = advanceTurn(table);
-    } else if (mauMauRules.skipRankIds.includes(card.rankId as never)) {
+    } else if (optionOn(context, "SkipEights") && mauMauRules.skipRankIds.includes(card.rankId as never)) {
       logText = `${logText} - ${text.skipped}`;
       table = advanceTurn(table, 2);
-    } else if (mauMauRules.reverseRankIds.includes(card.rankId as never)) {
+    } else if (optionOn(context, "ReverseNines") && mauMauRules.reverseRankIds.includes(card.rankId as never)) {
       // Zu zweit gäbe ein Richtungswechsel nichts her - dort wirkt er wie Aussetzen.
       const twoPlayers = table.turnOrder.length <= 2;
       logText = `${logText} - ${twoPlayers ? text.skipped : text.reversed}`;
@@ -360,7 +375,7 @@ export const mauMauRuleset: CardRuleset = {
         table,
         pendingDraw,
         drawnThisTurn: 0,
-        extra: { ...state.extra, mauDrawnCardId: null },
+        extra: { ...state.extra, mauDrawnCardId: null, mauDrawnCardIds: null },
         wishSuitId,
         turnNumber: state.turnNumber + 1,
         updatedAt: context.now
@@ -386,16 +401,25 @@ export const mauMauRuleset: CardRuleset = {
     if (state.pendingDraw > 0) {
       const penalty = state.pendingDraw;
       const result = drawCards(state.table, playerId, penalty);
+      const drawn = clearError({
+        ...state,
+        table: result.state,
+        pendingDraw: 0,
+        drawnThisTurn: result.drawnCardIds.length,
+        extra: { ...state.extra, mauDrawnCardId: null, mauDrawnCardIds: JSON.stringify(result.drawnCardIds) },
+        updatedAt: context.now
+      });
+      const canPlayDrawn = context.settings.cardTableMauPlayPenaltyDrawn === "on"
+        && result.drawnCardIds.length > 0 && hasPlayableCard(drawn, context, playerId);
 
       return appendLog(
-        clearError({
-          ...state,
-          table: advanceTurn(result.state),
-          pendingDraw: 0,
+        canPlayDrawn ? drawn : {
+          ...drawn,
+          table: advanceTurn(drawn.table),
           drawnThisTurn: 0,
-          turnNumber: state.turnNumber + 1,
-          updatedAt: context.now
-        }),
+          extra: { ...drawn.extra, mauDrawnCardIds: null },
+          turnNumber: state.turnNumber + 1
+        },
         playerName(context, playerId),
         `${text.drewMany} ${result.drawnCardIds.length} ${text.cards}`
       );
@@ -421,11 +445,11 @@ export const mauMauRuleset: CardRuleset = {
         ...state,
         table: result.state,
         drawnThisTurn: 1,
-        extra: { ...state.extra, mauDrawnCardId: result.drawnCardIds[0] ?? null },
+        extra: { ...state.extra, mauDrawnCardId: null, mauDrawnCardIds: JSON.stringify(result.drawnCardIds) },
         updatedAt: context.now
       });
 
-      if (hasPlayableCard(drawn, context, playerId)) {
+      if (optionOn(context, "PlayDrawn") && hasPlayableCard(drawn, context, playerId)) {
         return appendLog(drawn, playerName(context, playerId), text.drew as string);
       }
 
@@ -464,6 +488,7 @@ export const mauMauRuleset: CardRuleset = {
         ...state,
         table: advanceTurn(state.table),
         drawnThisTurn: 0,
+        extra: { ...state.extra, mauDrawnCardId: null, mauDrawnCardIds: null },
         turnNumber: state.turnNumber + 1,
         updatedAt: context.now
       }),
@@ -619,7 +644,7 @@ export const mauMauRuleset: CardRuleset = {
       const wild = isWild(context.deck, card);
       const attack =
         mauMauRules.drawTwoRankIds.includes(card.rankId as never) ||
-        mauMauRules.skipRankIds.includes(card.rankId as never);
+        (optionOn(context, "SkipEights") && mauMauRules.skipRankIds.includes(card.rankId as never));
 
       // Wunschkarten halten, solange es andere Wege gibt.
       if (wild) {

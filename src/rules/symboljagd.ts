@@ -1,10 +1,13 @@
 import type { ScoreEntry } from "@open-party-lab/game-core";
 import type { CardTableActionState, CardTableChoiceState } from "../protocol.js";
-import { handOf, moveCard, toCardFaces } from "../cards/cardTable.js";
+import { handOf, moveCard, shuffleCardIds, toCardFaces } from "../cards/cardTable.js";
 import { finishGame, playerName, type CardGameState, type CardRuleset } from "./types.js";
 import type { CardTableStackState } from "../protocol.js";
 
 const centerZone = "symboljagd-center";
+const reserveZone = "symboljagd-reserve";
+const targetKey = "symboljagdCardTarget";
+const playedKey = (playerId: string) => `symboljagdPlayed:${playerId}`;
 const graceMs = 2_000;
 const wrongAnswerLockMs = 5_000;
 const solvedPrefix = "symboljagdSolved:";
@@ -32,6 +35,12 @@ function blockedUntil(state: Parameters<CardRuleset["choiceForCard"]>[0], player
   return typeof value === "number" ? value : 0;
 }
 
+function cardTarget(settings: Readonly<Record<string, unknown>>): number | undefined {
+  if (settings.cardTableSymboljagdDealMode !== "fixed") return undefined;
+  const value = Number(settings.cardTableSymboljagdCardTarget ?? 30);
+  return Number.isFinite(value) ? Math.max(1, Math.min(300, Math.round(value))) : 30;
+}
+
 export const symboljagdRuleset: CardRuleset = {
   id: "symboljagd",
   label: { de: "Symboljagd", en: "Symbol Hunt" },
@@ -44,21 +53,26 @@ export const symboljagdRuleset: CardRuleset = {
   controllerHandLimit: 1,
   openStartCard: false,
   turnBased: false,
-  minSeats: 2,
+  minSeats: 1,
   handSizeFor({ playerCount, deckCards }) {
     return Math.max(1, Math.floor((deckCards - 1) / Math.max(1, playerCount)));
   },
-  setupRound(state) {
+  remainingCards(state, playerId) {
+    const target = state.extra[targetKey];
+    return typeof target === "number" ? Math.max(0, target - Number(state.extra[playedKey(playerId)] ?? 0)) : handOf(state.table, playerId).length;
+  },
+  setupRound(state, context) {
     const shuffled = [
       ...state.table.turnOrder.flatMap((id) => state.table.hands[id] ?? []),
       ...state.table.drawPile,
       ...state.table.discardPile
     ];
     const center = shuffled.shift();
+    const target = cardTarget(context.settings);
     const hands: Record<string, string[]> = Object.fromEntries(state.table.turnOrder.map((id) => [id, []]));
     shuffled.forEach((id, index) => {
       const playerId = state.table.turnOrder[index % state.table.turnOrder.length];
-      if (playerId) hands[playerId]?.push(id);
+      if (playerId && (target === undefined || index < state.table.turnOrder.length)) hands[playerId]?.push(id);
     });
     return {
       ...state,
@@ -67,9 +81,14 @@ export const symboljagdRuleset: CardRuleset = {
         hands,
         drawPile: [],
         discardPile: [],
-        zones: { ...state.table.zones, [centerZone]: center ? [center] : [], "symboljagd-history": [] }
+        zones: { ...state.table.zones, [centerZone]: center ? [center] : [], "symboljagd-history": [],
+          [reserveZone]: target === undefined ? [] : shuffled.slice(state.table.turnOrder.length) }
       },
-      extra: Object.fromEntries(Object.entries(state.extra).filter(([key]) => !key.startsWith(solvedPrefix)))
+      extra: {
+        ...Object.fromEntries(Object.entries(state.extra).filter(([key]) => !key.startsWith(solvedPrefix) && !key.startsWith("symboljagdPlayed:") && key !== "symboljagdSoloTimeMs" && key !== targetKey)),
+        ...(target === undefined ? {} : { [targetKey]: target }),
+        symboljagdChallengeSerial: 0
+      }
     };
   },
   introMessage(context) {
@@ -78,11 +97,15 @@ export const symboljagdRuleset: CardRuleset = {
       : "Finde das gemeinsame Bild auf deiner Karte und der Mitte. Tippe das Bild direkt auf deiner Karte an.";
   },
   rules(context) {
+    const target = cardTarget(context.settings);
+    const goal = target === undefined
+      ? (context.language === "en" ? "Be the first to play all your cards." : "Lege als Erste oder Erster alle eigenen Karten ab.")
+      : (context.language === "en" ? `Everyone must play ${target} cards. The first to finish wins. Old center cards are shuffled back into the reserve when it runs out.` : `Alle müssen ${target} Karten ablegen. Wer zuerst fertig ist, gewinnt. Ist der Vorrat leer, werden alte Mittelkarten wieder untergemischt.`);
     return context.language === "en" ? [
-      { title: "Goal", lines: ["Be the first to play all your cards."] },
+      { title: "Goal", lines: [goal, "With one player and zero AI players, play solo against the clock. Your time runs from the start of play to your last card; pauses are excluded, wrong-answer lockouts count."] },
       { title: "How to play", lines: ["Everyone plays at once. Compare your top card with the center card: exactly one picture matches.", "Tap the matching picture directly on your card. A correct answer puts your card in the center and reveals your next card.", "A wrong answer locks you for 5 seconds, or until any player solves the current card.", "If another player solves the card first, a matching picture from that previous center card carries no penalty for 2 seconds, even if your phone has already received the new card. Inputs explicitly referring to an old center card are ignored."] }
     ] : [
-      { title: "Ziel", lines: ["Lege als Erste oder Erster alle eigenen Karten ab."] },
+      { title: "Ziel", lines: [goal, "Mit einer Person und null KI-Spielern spielst du allein gegen die Zeit. Gemessen wird vom Spielstart bis zur letzten Karte; Pausen zählen nicht mit, Fehlklick-Sperren schon."] },
       { title: "Ablauf", lines: ["Alle spielen gleichzeitig. Vergleiche deine Karte mit der Karte in der Mitte: Genau ein Bild ist gleich.", "Tippe das passende Bild direkt auf deiner Karte an. Bei einem Treffer kommt deine Karte in die Mitte und deine nächste Karte wird aufgedeckt.", "Ein falscher Tipp sperrt dich 5 Sekunden oder bis jemand die aktuelle Karte löst.", "Löst jemand die Karte zuerst, wird das passende Bild zur vorherigen Mitte noch 2 Sekunden lang nicht bestraft, auch wenn dein Handy bereits die neue Karte empfangen hat. Eingaben mit einer alten Mittelkarten-ID werden ignoriert."] }
     ];
   },
@@ -103,15 +126,17 @@ export const symboljagdRuleset: CardRuleset = {
     if (!centerId || !choiceId) return state;
     const ownSymbols = symbols(state, cardId);
     const shared = ownSymbols.filter((symbol) => symbols(state, centerId).includes(symbol));
-    const [challengeId, symbolId] = choiceId.split("|");
+    const [challengeId, symbolId, serial] = choiceId.split("|");
     if (challengeId !== centerId) return state;
+    if (serial !== undefined && Number(serial) !== state.extra.symboljagdChallengeSerial) return state;
     if (blockedUntil(state, playerId) > context.now) return state;
 
     if (!ownSymbols.includes(symbolId!) || shared[0] !== symbolId) {
       // A phone update can replace the challenge ID before a player finishes
       // tapping the picture they matched against the previous host card.
-      const recentMatch = ownSymbols.includes(symbolId!) && (state.table.zones["symboljagd-history"] ?? []).some((oldCenterId) => {
-        const solvedAt = state.extra[solvedKey(oldCenterId)];
+      const recentMatch = state.table.turnOrder.length > 1 && ownSymbols.includes(symbolId!) && Object.entries(state.extra).some(([key, solvedAt]) => {
+        if (!key.startsWith(solvedPrefix)) return false;
+        const oldCenterId = key.slice(solvedPrefix.length);
         return typeof solvedAt === "number" && context.now >= solvedAt && context.now - solvedAt <= graceMs
           && symbols(state, oldCenterId).includes(symbolId!);
       });
@@ -129,6 +154,7 @@ export const symboljagdRuleset: CardRuleset = {
     const extra: CardGameState["extra"] = {
       ...state.extra,
       [solvedKey(centerId)]: context.now,
+      symboljagdChallengeSerial: Number(state.extra.symboljagdChallengeSerial ?? 0) + 1,
       [feedbackKeys.playerId]: playerId,
       [feedbackKeys.playerName]: playerName(context, playerId),
       [feedbackKeys.symbolId]: symbolId,
@@ -138,8 +164,26 @@ export const symboljagdRuleset: CardRuleset = {
       if (key.startsWith(solvedPrefix) && typeof value === "number" && context.now - value > graceMs) delete extra[key];
     }
     for (const id of table.turnOrder) extra[blockedKey(id)] = 0;
+    const target = state.extra[targetKey];
+    const played = Number(state.extra[playedKey(playerId)] ?? 0) + 1;
+    const remaining = typeof target === "number" ? Math.max(0, target - played) : handOf(table, playerId).length;
+    if (typeof target === "number") {
+      extra[playedKey(playerId)] = played;
+      if (remaining > 0) {
+        // Reuse only cards that have left the center; live cards stay unique.
+        if (!(table.zones[reserveZone]?.length)) {
+          table = { ...table, zones: { ...table.zones,
+            [reserveZone]: shuffleCardIds([...(table.zones["symboljagd-history"] ?? [])]), "symboljagd-history": [] } };
+        }
+        const replacement = table.zones[reserveZone]?.[0];
+        if (replacement) table = moveCard(table, replacement, { kind: "hand", playerId }, "bottom");
+      }
+    }
     const next = { ...state, table, extra, updatedAt: context.now, message: `${playerName(context, playerId)}: ${names[Number(symbolId)] ?? symbolId}` };
-    const remaining = handOf(table, playerId).length;
+    if (remaining === 0 && table.turnOrder.length === 1 && state.bots.length === 0) {
+      extra.symboljagdSoloTimeMs = Math.max(0, context.now - (state.startedAt ?? context.now));
+      return finishGame(next, playerId, playerName(context, playerId), context.language === "en" ? "All cards completed!" : "Alle Karten abgelegt!");
+    }
     return remaining === 0
       ? finishGame(next, playerId, playerName(context, playerId), context.language === "en" ? `${playerName(context, playerId)} wins!` : `${playerName(context, playerId)} gewinnt!`)
       : next;
@@ -156,7 +200,7 @@ export const symboljagdRuleset: CardRuleset = {
     return {
       id: `symboljagd:${centerId}`,
       label: context.language === "en" ? "Tap the matching picture" : "Tippe das passende Bild",
-      options: symbols(state, cardId).map((id) => ({ id: `${centerId}|${id}`, label: (context.language === "en" ? namesEn : names)[Number(id)] ?? id, symbolImage: id }))
+      options: symbols(state, cardId).map((id) => ({ id: `${centerId}|${id}${typeof state.extra[targetKey] === "number" ? `|${state.extra.symboljagdChallengeSerial}` : ""}`, label: (context.language === "en" ? namesEn : names)[Number(id)] ?? id, symbolImage: id }))
     };
   },
   condition() { return undefined; },
@@ -187,6 +231,6 @@ export const symboljagdRuleset: CardRuleset = {
     const center = centerCardId(state);
     if (!own || !center) return { kind: "wait" };
     const match = symbols(state, own).find((id) => symbols(state, center).includes(id));
-    return match ? { kind: "play", cardId: own, choiceId: `${center}|${match}` } : { kind: "wait" };
+    return match ? { kind: "play", cardId: own, choiceId: `${center}|${match}${typeof state.extra[targetKey] === "number" ? `|${state.extra.symboljagdChallengeSerial}` : ""}` } : { kind: "wait" };
   }
 };

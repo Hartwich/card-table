@@ -1,4 +1,5 @@
 import type { CardBackStyle, CardColor } from "../cards/cardTypes.js";
+import { formatCompletionTime } from "../timeFormat.js";
 import { symboljagdLayout, type SymboljagdSpot } from "../cards/symboljagdLayout.js";
 import type { CardTableCardStyle } from "../protocol.js";
 import type {
@@ -27,6 +28,7 @@ type SupportedLanguage = "de" | "en";
 interface CardHandLayoutModel {
   kind: "card_hand";
   isSymboljagd?: boolean;
+  symboljagdSoloTime?: string;
   symboljagdPositions?: ReadonlyArray<SymboljagdSpot>;
   symboljagdFeedback?: CardTableControllerState["symboljagdFeedback"];
   isRomme?: boolean;
@@ -41,6 +43,7 @@ interface CardHandLayoutModel {
   backStyle: CardBackStyle;
   cardStyle: CardTableCardStyle;
   hand: CardTableHandCardState[];
+  dimUnplayable?: boolean;
   stacks: CardTableStackState[];
   seats: CardTableSeatState[];
   actions: CardTableActionState[];
@@ -98,6 +101,8 @@ export function buildCardTableControllerModel(
     kind: "card_hand",
     isRomme: gameState.rulesetId === "romme",
     isSymboljagd: gameState.rulesetId === "symboljagd",
+    symboljagdSoloTime: gameState.rulesetId === "symboljagd" && typeof gameState.symboljagdSoloTimeMs === "number"
+      ? formatCompletionTime(gameState.symboljagdSoloTimeMs, state.room?.language) : undefined,
     symboljagdPositions: gameState.rulesetId === "symboljagd" && gameState.hand?.[0]
       ? symboljagdLayout(gameState.hand[0].cardId, gameState.hand[0].symbols?.length ?? 0)
       : undefined,
@@ -125,6 +130,7 @@ export function buildCardTableControllerModel(
     backStyle: gameState.backStyle ?? "classic",
     cardStyle: gameState.cardStyle ?? "classic",
     hand: gameState.hand ?? [],
+    dimUnplayable: gameState.dimUnplayable ?? true,
     stacks: gameState.stacks ?? [],
     seats: gameState.seats ?? [],
     actions: gameState.actions ?? [],

@@ -19,6 +19,148 @@ function fixture(rules, deckId = rules.defaultDeckId) {
   return { state, context, card };
 }
 
+for (const penalty of [2, 4]) {
+  test(`Mau-Mau: +${penalty} allows any matching penalty card, independently of normal drawing`, () => {
+    const { state, context, card } = fixture(mau);
+    context.settings.cardTableMauPlayPenaltyDrawn = "on";
+    context.settings.cardTableMauPlayDrawn = "off";
+    const old = card("hearts", "3"), first = card("hearts", "4"), second = card("clubs", "7");
+    state.table.discardPile = [card("hearts", "7")];
+    state.table.hands.a = [old];
+    state.table.drawPile = [first, second, card("spades", "2"), card("spades", "3")].slice(0, penalty);
+    state.pendingDraw = penalty;
+    const drawn = mau.drawCard(state, context, "a");
+    assert.equal(drawn.pendingDraw, 0);
+    assert.equal(drawn.table.activeIndex, 0);
+    assert.equal(drawn.turnNumber, 0);
+    assert.equal(mau.canPlayCard(drawn, context, "a", first).allowed, true);
+    assert.equal(mau.canPlayCard(drawn, context, "a", second).allowed, true);
+    assert.equal(mau.canPlayCard(drawn, context, "a", old).allowed, false);
+    const intent = mau.botMove(drawn, context, "a");
+    assert.equal(intent.kind, "play");
+    assert.ok([first, second].includes(intent.cardId));
+    const played = mau.playCard(drawn, context, "a", second);
+    assert.equal(played.table.activeIndex, 1);
+    assert.equal(played.pendingDraw, 2); // The old penalty was paid; this is a new seven.
+    assert.equal(played.drawnThisTurn, 0);
+    assert.equal(played.extra.mauDrawnCardIds, null);
+    const passed = mau.runAction(drawn, context, "a", "pass");
+    assert.equal(passed.table.activeIndex, 1);
+    assert.equal(passed.drawnThisTurn, 0);
+    assert.equal(passed.extra.mauDrawnCardIds, null);
+    assert.equal(mau.drawCard(drawn, context, "a").table.hands.a.length, drawn.table.hands.a.length);
+  });
+}
+
+for (const setting of [undefined, "off"]) {
+  test(`Mau-Mau: penalty immediate play defaults off (${setting})`, () => {
+    const { state, context, card } = fixture(mau);
+    if (setting) context.settings.cardTableMauPlayPenaltyDrawn = setting;
+    state.table.discardPile = [card("hearts", "7")];
+    state.table.hands.a = [card("hearts", "3")];
+    state.table.drawPile = [card("hearts", "4"), card("clubs", "7")];
+    state.pendingDraw = 2;
+    const next = mau.drawCard(state, context, "a");
+    assert.equal(next.table.activeIndex, 1);
+    assert.equal(next.drawnThisTurn, 0);
+  });
+}
+
+for (const remaining of [0, 1, 2]) {
+  test(`Mau-Mau: penalty option handles ${remaining} available cards`, () => {
+    const { state, context, card } = fixture(mau);
+    context.settings.cardTableMauPlayPenaltyDrawn = "on";
+    state.table.discardPile = [card("hearts", "7")];
+    state.table.hands.a = [card("hearts", "3")];
+    // One available card fits; two available cards do not. Old matching cards never keep the turn.
+    state.table.drawPile = remaining === 1 ? [card("hearts", "4")]
+      : [card("clubs", "4"), card("spades", "5")].slice(0, remaining);
+    state.pendingDraw = 4;
+    const next = mau.drawCard(state, context, "a");
+    assert.equal(next.pendingDraw, 0);
+    assert.equal(next.table.hands.a.length, 1 + remaining);
+    assert.equal(next.table.activeIndex, remaining === 1 ? 0 : 1);
+  });
+}
+
+test("Mau-Mau: penalty house rule text reflects the selected option in both languages", () => {
+  const { context } = fixture(mau);
+  context.settings.cardTableMauPlayPenaltyDrawn = "on";
+  assert.match(mau.rules(context).flatMap(section => section.lines).join(" "), /Nach Strafziehen.*Alte Handkarten sind gesperrt/);
+  context.language = "en";
+  assert.match(mau.rules(context).flatMap(section => section.lines).join(" "), /After drawing a penalty.*Old hand cards cannot be played/);
+});
+
+test("Mau-Mau: disabling stacked sevens forces humans and bots to draw", () => {
+  const { state, context, card } = fixture(mau);
+  context.settings.cardTableMauStackSevens = "off";
+  state.table.discardPile = [card("hearts", "7")];
+  state.table.hands.a = [card("clubs", "7"), card("hearts", "3")];
+  state.pendingDraw = 2;
+  assert.equal(mau.canPlayCard(state, context, "a", card("clubs", "7")).allowed, false);
+  assert.deepEqual(mau.botMove(state, context, "a"), { kind: "draw" });
+  assert.equal(mau.playCard(state, context, "a", card("clubs", "7")).pendingDraw, 2);
+  const next = mau.drawCard(state, context, "a");
+  assert.equal(next.pendingDraw, 0);
+  assert.equal(next.table.activeIndex, 1);
+});
+
+for (const [rank, setting] of [["8", "cardTableMauSkipEights"], ["9", "cardTableMauReverseNines"]]) {
+  test(`Mau-Mau: ${setting} toggles its effect`, () => {
+    const { state, context, card } = fixture(mau);
+    state.table.discardPile = [card("hearts", "2")];
+    state.table.hands.a = [card("hearts", rank), card("clubs", "3")];
+    assert.equal(mau.playCard(state, context, "a", card("hearts", rank)).table.activeIndex, 2);
+    context.settings[setting] = "off";
+    const next = mau.playCard(state, context, "a", card("hearts", rank));
+    assert.equal(next.table.activeIndex, 1);
+    assert.equal(next.table.direction, 1);
+  });
+}
+
+test("Mau-Mau: jack-on-jack restriction respects the wished suit", () => {
+  const { state, context, card } = fixture(mau);
+  state.table.discardPile = [card("hearts", "jack")];
+  state.table.hands.a = [card("clubs", "jack")];
+  state.wishSuitId = "clubs";
+  assert.equal(mau.canPlayCard(state, context, "a", card("clubs", "jack")).allowed, true);
+  context.settings.cardTableMauJackOnJack = "off";
+  assert.equal(mau.canPlayCard(state, context, "a", card("clubs", "jack")).allowed, false);
+  state.table.discardPile = [card("hearts", "2")];
+  assert.equal(mau.canPlayCard(state, context, "a", card("clubs", "jack")).allowed, true);
+});
+
+test("Mau-Mau: disabling immediate play keeps the drawn card and advances once", () => {
+  const { state, context, card } = fixture(mau);
+  context.settings.cardTableMauPlayDrawn = "off";
+  state.table.discardPile = [card("hearts", "2")];
+  state.table.hands.a = [card("clubs", "3")];
+  const fresh = card("hearts", "4");
+  state.table.drawPile = [fresh];
+  const next = mau.drawCard(state, context, "a");
+  assert.equal(next.table.activeIndex, 1);
+  assert.equal(next.turnNumber, 1);
+  assert.equal(next.drawnThisTurn, 0);
+  assert.ok(next.table.hands.a.includes(fresh));
+  assert.equal(mau.canPlayCard(next, context, "a", fresh).allowed, false);
+});
+
+test("Mau-Mau: selected house rules are explained in German and English", () => {
+  const { context } = fixture(mau);
+  for (const option of ["StackSevens", "SkipEights", "ReverseNines", "JackOnJack", "PlayDrawn"]) {
+    context.settings[`cardTableMau${option}`] = "off";
+  }
+  const german = mau.rules(context).flatMap(section => section.lines).join(" ");
+  assert.match(german, /nicht gestapelt/);
+  assert.match(german, /Zug endet sofort/);
+  assert.match(german, /normale Karte ohne Sonderwirkung/);
+  context.language = "en";
+  const english = mau.rules(context).flatMap(section => section.lines).join(" ");
+  assert.match(english, /cannot be stacked/);
+  assert.match(english, /turn ends immediately/);
+  assert.match(english, /ordinary card/);
+});
+
 test("Mau-Mau: a pass cannot move a seven penalty to another player", () => {
   const { state, context } = fixture(mau);
   state.pendingDraw = 4;

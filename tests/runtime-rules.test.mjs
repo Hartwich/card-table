@@ -29,6 +29,29 @@ for (const ruleset of ["mau-mau", "fischen", "luegen", "free-play"]) {
   });
 }
 
+test("new lobby toggles accept only their declared values", () => {
+  const ctx = context("mau-mau", "french-52", 3);
+  const fields = cardTableManifest.lobbySetup.fields.filter(field => field.id === "dimUnplayable" || field.id.startsWith("mau"));
+  assert.equal(fields.length, 7);
+  for (const field of fields) {
+    const valid = serverGame.handleHostAction(null, { type: "configure-lobby", [field.actionKey]: "off" }, ctx);
+    assert.equal(valid.roomSettings[field.settingKey], "off");
+    const invalid = serverGame.handleHostAction(null, { type: "configure-lobby", [field.actionKey]: "invalid" }, ctx);
+    assert.equal(invalid.roomSettings[field.settingKey], undefined);
+  }
+});
+
+test("dimming is a display preference and does not change hand legality", () => {
+  const ctx = context("mau-mau", "french-52", 3);
+  const state = serverGame.startRound(serverGame.createInitialState(ctx), ctx);
+  const before = serverGame.toControllerStateForPlayer(state, ctx, "p0");
+  assert.equal(before.dimUnplayable, true);
+  ctx.roomSettings.cardTableDimUnplayable = "off";
+  const after = serverGame.toControllerStateForPlayer(state, ctx, "p0");
+  assert.equal(after.dimUnplayable, false);
+  assert.deepEqual(after.hand, before.hand);
+});
+
 test("private hand value is sent only to its controller", () => {
   const ctx = context("schwimmen", "skat-32", 2);
   const state = serverGame.startRound(serverGame.createInitialState(ctx), ctx);

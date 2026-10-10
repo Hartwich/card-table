@@ -1,6 +1,7 @@
 import { cardTableManifest } from "../manifest.js";
 import type { CardTablePublicState } from "../protocol.js";
 import { escapeHtml } from "./cardHtml.js";
+import { formatCompletionTime } from "../timeFormat.js";
 
 /**
  * Runden-Intro und Ergebnis.
@@ -36,8 +37,10 @@ function labels(language?: "de" | "en") {
     players: en ? "Players" : "Spieler",
     deck: en ? "Deck" : "Deck",
     result: en ? "Round result" : "Rundenergebnis",
-    winner: en ? "Winner" : "Gewinner",
-    noWinner: en ? "No winner this round." : "Diese Runde ohne Sieger.",
+    winner: en ? "Winner" : "Gewonnen hat",
+    soloResult: en ? "All cards completed!" : "Alle Karten abgelegt!",
+    time: en ? "Your time" : "Deine Zeit",
+    noWinner: en ? "No winner this round." : "Niemand hat diese Runde gewonnen.",
     points: en ? "pts" : "Pkt.",
     bot: en ? "AI" : "KI",
     next: en ? "Ready on your phone to play the next round." : "Am Handy bereit machen, um die nächste Runde zu spielen.",
@@ -74,6 +77,7 @@ export function roundScreenHtml(state: RoundScreenStateLike): string | null {
   }
 
   const names = new Map((state.room?.players ?? []).map((player) => [player.id, player]));
+  const soloTime = gameState?.rulesetId === "symboljagd" ? gameState.symboljagdSoloTimeMs : undefined;
   const deltas = new Map((state.scoreboard?.entries ?? []).map((entry) => [entry.playerId, entry.delta]));
   const totals = new Map((state.scoreboard?.entries ?? []).map((entry) => [entry.playerId, entry.total]));
 
@@ -124,9 +128,11 @@ export function roundScreenHtml(state: RoundScreenStateLike): string | null {
     : "";
 
   return `<section class="ct-screen">
-    <h1>${text.result}</h1>
+    <h1>${soloTime !== undefined ? text.soloResult : text.result}</h1>
     <p class="ct-screen-lead">${winnerLine}</p>
-    <ol class="ct-score">${rows}</ol>
+    ${soloTime !== undefined
+      ? `<dl class="ct-screen-meta"><div><dt>${text.time}</dt><dd style="font-size:2.5rem;font-variant-numeric:tabular-nums">${formatCompletionTime(soloTime, language)}</dd></div></dl>`
+      : `<ol class="ct-score">${rows}</ol>`}
     ${breakdown}
     <p class="ct-screen-lead">${text.next}</p>
     <button type="button" class="ct-result-menu" data-card-table-menu>${text.menu}</button>

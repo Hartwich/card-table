@@ -361,7 +361,7 @@ function buildSeats(
       color: bot?.color ?? player?.color ?? "#8d5f4a",
       // Ein Bot ist nie "abwesend" - er sitzt immer am Tisch.
       connected: bot ? true : player?.connected ?? false,
-      handCount: handOf(state.table, playerId).length,
+      handCount: ruleset.remainingCards?.(state, playerId) ?? handOf(state.table, playerId).length,
       // Der Kartentisch zeigt ausschließlich die Wertung dieser Runde.
       score: state.gameScores[playerId] ?? 0,
       scoreDelta: roundDeltas.get(playerId) ?? 0,
@@ -407,6 +407,8 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
     statusMessage: state.message,
     log: state.log,
     gameOver: state.gameOver,
+    symboljagdSoloTimeMs: state.rulesetId === "symboljagd" && state.gameOver && typeof state.extra.symboljagdSoloTimeMs === "number"
+      ? state.extra.symboljagdSoloTimeMs : undefined,
     winnerPlayerId: state.winnerPlayerId,
     winnerName: state.winnerName,
     lastError: state.lastError,
@@ -636,6 +638,7 @@ export const serverGame: ServerGame<CardGameState, CardTableInput, CardTablePubl
       // Die Regeln stehen auf dem Host; das Handy braucht sie nicht mitgeschickt.
       rules: [],
       hand,
+      dimUnplayable: readSetting(context, cardTableRoomSettingKeys.dimUnplayable) !== "off",
       canAct:
         state.phase === "playing" &&
         !state.gameOver &&
