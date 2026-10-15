@@ -1,304 +1,158 @@
-# Kartentisch (card-table)
+# Card Table
 
-Wiederverwendbare Grundlage für Kartenspiele in Open Party Lab: ein gemeinsamer
-Spieltisch auf dem großen Bildschirm, eine Kartenhand im Querformat auf dem
-Handy und austauschbare Regelwerke.
+Twelve card games for [Open Party Lab](https://github.com/Hartwich/Open-Party-Lab): a shared table on the big screen, a private hand on each phone, and interchangeable, server-authoritative rulesets.
 
-## Enthaltene Kartenspiele
+**Status: alpha.** Rules, pacing, balance and presentation are still evolving. The in-game name is **Kartentisch** in German and **Card Table** in English.
 
-| Regelwerk | Kurz | Zeigt am Fundament |
+## Screenshots
+
+### Shared table — Mau Mau
+
+![Mau Mau host table with four players, a draw pile and a face-up discard](docs/screenshots/mau-mau-host.png)
+
+### Private phone hand — landscape
+
+![Mau Mau phone hand with a selected heart card and equally sized Play, Draw and Pass buttons](docs/screenshots/mau-mau-controller.png)
+
+### Symbol Hunt
+
+![Symbol Hunt host table with eight original illustrated symbols on the center card](docs/screenshots/symbol-hunt-host.png)
+
+These images show the actual host renderer and phone controller using example round states. See [screenshot notes](docs/screenshots/README.md) for capture scope and dimensions.
+
+## Included games
+
+| Ruleset | How it plays | What it demonstrates |
 | --- | --- | --- |
-| **Mau-Mau** | Farbe oder Wert bedienen. 7 zieht zwei (stapelbar), 8 setzt aus, 9 dreht die Richtung (zu zweit: aussetzen), Bube wünscht sich eine Farbe. | Ablagestapel, Zusatzbedingung, Auswahl beim Legen |
-| **Schwimmen (31)** | Drei Handkarten, drei offene Tischkarten. Einzeln oder alle tauschen, schieben, klopfen. Drei Leben, 31 ist Feuer. | Offene Tischzone, Auswahl des Tauschziels, mehrere Geber pro Runde |
-| **Stichwette** | Erst Stiche ansagen, dann spielen. Kronen stechen alles, Federn verlieren immer. Runde 1 hat eine Karte, Runde 2 zwei, und so weiter. | Zwei Phasen, Stich als eigene Zone, echte Punktewertung |
-| **Zahlenreihe** | Vier Farbreihen von 1 bis 20, jede eröffnet mit der Elf. Pro Zug so viele Karten anlegen, wie passen und gewollt sind. | Mehrere Ablagereihen statt eines Stapels, mehrteiliger Zug, eigenes Deck |
-| **Lügen** | Karten verdeckt auf den Stapel legen und den Wert ansagen — auch falsch. Wer zweifelt und danebenliegt, nimmt den ganzen Stapel. | Verdeckte Zone, Ansage als Zustand, Aktionen für Nicht-Aktive |
-| **Schwarzer Peter** | Paare ablegen, beim Nachbarn blind eine Karte ziehen. Wer am Ende die einzelne Karte hält, verliert. | Automatisches Ablegen, blindes Ziehen aus fremder Hand, eigenes Deck |
-| **Fischen** | Einen Mitspieler nach einem Wert fragen. Vier gleiche wandern als Satz auf den Tisch, sonst wird gefischt. | Auswahl eines Mitspielers, Auslagen als eigene Zonen |
-| **Herzeln** | Stiche vermeiden: jedes Herz zählt 1, die Pik-Dame 13. Farbe bedienen, Herz erst nach dem Bruch. Alle Strafpunkte auf einmal drehen die Wertung um. | Bedienzwang, negative Wertung, Sonderregel über die ganze Runde |
-| **Rommé** | Zwei Doppelblätter plus vier Joker. 13 Karten, 40 Augen zur Erstauslage, danach Kombinationen erweitern und die letzte Handkarte abwerfen. | Satz- und Folgenprüfung, verdeckte Hand und gemeinsame Auslagen, Serienwertung |
-| **Symboljagd** | Vergleiche die oberste eigene Karte mit der Mitte: Genau ein Bild ist gleich. Tippe das passende Motiv, um deine Karte abzulegen. | Kartenpensum: ganzer Kartensatz oder feste 1–300 Karten pro Person (Standardziel 30), mit wieder untergemischten alten Mittelkarten und gleichen Zielen. 8 Symbole pro Karte als Standard; im Setup auch 9 oder 10 wählbar. Die passenden Sets enthalten 57, 73 oder 91 eindeutige Bildmotive und garantieren genau ein gemeinsames Symbol je Kartenpaar. Solo ohne KI mit Abschlusszeit auf Host und Handy (Pausen ausgenommen, Fehlklick-Sperren inklusive) oder Echtzeitspiel mit mehreren Personen, 5-Sekunden-Sperre bei Fehlklick und 2-Sekunden-Nachsicht bei nahezu gleichzeitigen Treffern |
-| **Doppelkopf** | Jede Karte doppelt. Karo, alle Damen, alle Buben und die Herz-Zehn sind Trumpf. Die Kreuz-Damen bilden Re gegen Kontra. | Verdeckte Parteien, Trumpfordnung quer zu den Farben, Wertung nach Augen, wahlweise erst am Ende ausgezählt |
-| **Freies Spiel** | Offener Tisch ohne Regeln: ziehen, ablegen, Zug von Hand weitergeben. | Vorlage für neue Regelwerke |
+| **Mau Mau** | Match suit or rank. Sevens draw two, eights skip, nines reverse and jacks choose a suit, with configurable house rules. | Discard piles, draw penalties and choices before playing. |
+| **Schwimmen (31)** | Three hand cards and three face-up table cards. Swap one or all, pass or knock; three lives, with 31 as the strongest hand. | Shared cards, swap targets and hand evaluation. |
+| **Trick Bets (Stichwette)** | Bid your trick count, then play. Crowns beat everything; Feathers lose. Each round adds a card until a full deal. | Bidding, tricks, rotating dealers and series scoring. |
+| **Number Rows (Zahlenreihe)** | Build four color rows from 1 to 20, each opened by an eleven. Play as many matching cards as you want in a turn. | Multiple destinations and turns with several actions. |
+| **Cheat (Lügen)** | Play face-down cards and announce their rank, truthfully or otherwise. Challenge a claim; the loser takes the pile. | Hidden piles, declarations and out-of-turn challenges. |
+| **Old Maid (Schwarzer Peter)** | Discard pairs and draw blindly from a neighbor. The player left with the unpaired card loses. | Automatic pair removal and blind draws. |
+| **Go Fish (Fischen)** | Ask another player for a rank. Collect four of a kind; otherwise draw from the stock. | Player selection, requests and completed sets. |
+| **Hearts (Herzeln)** | Avoid hearts and the queen of spades. Follow suit, break hearts before leading them, or collect all penalty cards to reverse the score. | Following suit, negative scores and round-wide conditions. |
+| **Rummy (Rommé)** | Two 52-card packs and four jokers. Open with 40 points, build sets and runs, extend melds and discard to finish a turn. | Meld validation, shared layouts and cumulative scores. |
+| **Symbol Hunt (Symboljagd)** | Find the one shared picture between your top card and the center card. Play solo against the clock or race other players. | Real-time matching, illustrated symbols and timed solo results. |
+| **Doppelkopf** | Each card appears twice. Diamonds, queens, jacks and heart tens are trumps; club queens form Re against Kontra. | Hidden teams, trump ordering, reservations, announcements and house rules. |
+| **Free Play** | An open table without enforced card rules: draw, discard and advance the turn manually. | A minimal template for new rulesets. |
 
-Die vollständigen Regeln jedes Spiels stehen im Regelwerk selbst und werden auf
-dem Host über den **Regeln**-Button eingeblendet — Ziel, Zugablauf, was angelegt
-werden darf, Sonderkarten und Wertung.
+Each ruleset supplies full rules in **German and English**. Open **Rules** on the host to read the goal, turn sequence, legal moves, special cards and scoring. Active rules reflect the selected house rules.
 
-Stichwette, Zahlenreihe und Rommé sind eigenständige Umsetzungen klassischer
-Spielmechaniken mit eigenen Namen, eigenen Karten und eigener Wertung.
+## Host, phone and server
 
-## Status
+The **host** shows the shared table: stock, discard, tricks, exposed cards, rows, seats, hand counts and ruleset actions. The active seat is highlighted. Its compact header shows the game, direction and active conditions such as a wished suit or draw penalty. The table is a DOM overlay over the Phaser stage.
 
-Alpha. Spielbar, aber Regeln, Tempo und Optik ändern sich noch.
+The **phone** shows a private hand, actions, turn information and private hints. Tap a card to select it, then tap again or use **Play**. Shared piles stay on the host. Play, Draw and other standard hand actions use equal widths.
 
-## Wer zeigt was
+The **server** decides move legality, timers, scoring and round transitions. Controllers send intent; neither the host nor the phone decides game outcomes.
 
-Der **Host** ist der Spieltisch und bekommt die ganze Fläche: Nachziehstapel,
-Ablage, Stich, offene Tischkarten und Farbreihen, dazu die Sitzplätze mit
-Kartenzahl und die Buttons des Regelwerks. Die Kopfzeile bleibt bewusst karg —
-Spielname, ein Chip für eine aktive Zusatzbedingung (Wunschfarbe, Trumpf, "+2"),
-der Richtungspfeil und ein kleiner Regeln-Button. Wer am Zug ist, zeigt der
-hervorgehobene Sitzplatz statt einer Textzeile; alles Erklärende liegt hinter
-dem Regeln-Button und deckt den Tisch nur zu, solange jemand nachliest.
-Gezeichnet wird als DOM-Overlay über der Phaser-Bühne.
+## Setup
 
-Das **Handy** zeigt nur das eigene Blatt: Handkarten, Aktionen und einen kurzen
-Kopf mit Zug, Sonderbedingung und privatem Hinweis. Tischkarten und Stapel
-werden dort bewusst nicht wiederholt.
+Settings appear only when they apply to the selected ruleset.
 
-## KI-Spieler
-
-Im Host-Setup steht ein Feld **KI-Spieler** (0 bis 5). Die gewählten Sitze
-kommen als virtuelle Mitspieler an den Tisch: eigene Farbe, eigener Sitzplatz
-mit **KI**-Abzeichen, eigene Hand, eigene Punkte. Sie füllen bis zu sechs Plätze
-auf, spielen nach demselben Regelwerk wie alle anderen und lassen sich so mit
-einer einzigen Person am Tisch verwenden.
-
-Vor jedem Zug legt ein Bot eine sichtbare Denkpause von etwa 1,2 Sekunden ein,
-damit am Tisch nachvollziehbar bleibt, was passiert ist.
-
-**Eine Person reicht.** Jedes Regelwerk nennt über `minSeats` seine
-Mindestbesetzung — Doppelkopf vier, Herzeln drei, Mau-Mau zwei. Fehlen Plätze,
-füllt der Tisch sie von selbst mit KI-Sitzen auf: Doppelkopf allein starten
-ergibt drei Bots, ohne dass die Zahl vorher eingestellt werden muss. Das Feld
-"KI-Spieler" hebt die Zahl darüber hinaus an, senken kann es sie nicht unter die
-Mindestbesetzung. Nach oben deckelt der Tisch auf die freien Plätze — Menschen
-haben immer Vorrang.
-
-Wichtig für die Architektur: Ein Bot bekommt keinen Sonderweg. Der Antrieb in
-`src/bots/driver.ts` fragt das Regelwerk nur nach einer *Absicht* und schickt
-sie anschließend durch genau dieselben Funktionen wie den Input eines Handys.
-Ein Bot kann damit nicht an den Regeln vorbeispielen.
-
-Jedes Regelwerk bringt seine eigene Taktik mit:
-
-| Regelwerk | Wie der Bot denkt |
+| Setting | Availability and behavior |
 | --- | --- |
-| Mau-Mau | Sonderkarten sind Munition: 7 und 8 kommen, sobald jemand kurz vor dem Sieg steht. Der Bube bleibt bis zuletzt liegen, gewünscht wird die längste Farbe der Resthand. |
-| Schwimmen | Rechnet jeden Einzeltausch und den Komplettausch durch und nimmt den besten. Ab 27 Punkten wird geklopft, darunter geschoben. |
-| Stichwette | Schätzt die Hand für die Ansage (Krone sicher, hohe Trümpfe fast). Danach zählt nur die Differenz: Wer Stiche braucht, gewinnt so billig wie möglich; wer genug hat, wirft hoch ab. |
-| Zahlenreihe | Legt so lange, wie etwas passt, und beginnt mit den Karten, die direkt an ein Reihenende anschließen. |
-| Lügen | Ehrlich, solange die geforderte Karte da ist; sonst Bluff mit der Karte, die am längsten nicht gefragt ist. Gezweifelt wird, wenn der Bot den angesagten Wert selbst häuft - und lieber bei kleinem Stapel. |
-| Schwarzer Peter | Reines Glück, hier gibt es nichts zu entscheiden: Der Bot zieht. |
-| Fischen | Fragt nach dem Wert, von dem er selbst am meisten hat, und wendet sich an den Mitspieler mit den meisten Karten. |
-| Herzeln | Kann er verlieren, wirft er das Teuerste ab - die Pik-Dame zuerst. Muss er nehmen, nimmt er so billig wie möglich. |
-| Doppelkopf | Zieht Trumpf bei langer Hand, sticht nur fette Stiche und dann billig, wirft sonst augenarm ab. Er schaut ausdrücklich **nicht** in die Parteien der anderen. |
-| Freies Spiel | Ohne Regeln keine Taktik - hier übernimmt der generische Bot. |
+| Ruleset and deck | Twelve games; deck selection only where the game permits it. |
+| Initial hand size | 3–12 cards for Mau Mau, Cheat, Go Fish and Free Play. Other games control their own deals. |
+| Sort hand | Doppelkopf, Hearts, Trick Bets and Rummy. |
+| Dim unplayable cards | Enabled by default. Turning it off changes visual help, not legality. |
+| AI players | 0–5 requested AI seats, within the selected game's seat limit. |
+| Card style | Classic, Modern or Clear. |
+| Doppelkopf house rules | Nines, second heart ten, bonus scoring and other setup rules; eyes can be counted during play or only at the end. |
+| Mau Mau house rules | Stack sevens, skip on eights, reverse on nines, jack on jack, and immediately play a normally drawn card. These preserve the original enabled defaults. |
+| Play after a penalty draw | Mau Mau only; disabled by default and independent of normal drawing. |
+| Symbol Hunt symbols | 8, 9 or 10 symbols per card. |
+| Symbol Hunt workload | Whole deck, or an equal fixed target of 1–300 cards per player; the fixed target defaults to 30. |
 
-Regelwerke ohne eigenen `botMove` fallen automatisch auf `src/bots/fallback.ts`
-zurück: Der fragt das Regelwerk, welche Karte gelegt werden darf und welche
-Aktionen freigeschaltet sind, und spielt damit regelkonform, aber ohne Plan.
+With **Play after a penalty draw** enabled, a player who takes a +2, stacked +4, +6 or larger penalty may play **one matching card from those just drawn**, or keep them all and pass. Older hand cards cannot be played in that turn. If none of the drawn cards fits, the turn advances automatically. When disabled, taking penalty cards always ends the turn. The option for immediately playing a normally drawn single card is separate.
 
-Die Plattform selbst kennt keine KI-Sitze - sie zählt nur echte Spieler. Der
-Kartentisch führt die Punkte seiner Bots deshalb selbst und zeigt sie im eigenen
-Ergebnisbildschirm; über Runden hinweg trägt er sie aus der Vorrunde weiter.
+Symbol Hunt's 8-, 9- and 10-symbol sets contain 57, 73 and 91 distinct pictures and guarantee exactly one common symbol between each pair of cards. Fixed workloads give every player the same target and recycle old center cards when needed. A single human can play without AI. Solo time is measured on the server and frozen in the result: pauses do not count, wrong-answer lockouts do. Multiplayer uses a five-second wrong-answer lockout and a two-second grace period for nearly simultaneous correct matches.
 
-## Aufbau
+## AI players
 
-| Baustein | Datei |
-| --- | --- |
-| Deck-Definitionen und Presets | `src/cards/deckPresets.ts` |
-| Tisch-Engine (Stapel, Hände, Zonen, Zugreihenfolge) | `src/cards/cardTable.ts` |
-| Kartenbilder als SVG, drei Stile | `src/cards/cardSvg.ts` |
-| Regelwerk-Vertrag | `src/rules/types.ts` |
-| Regelwerke | `src/rules/*.ts` (ein Spiel pro Datei, Registry in `src/rules/index.ts`) |
-| Autoritative Runtime | `src/server/index.ts` |
-| Host-Szene mit DOM-Overlay | `src/host/index.ts` |
-| Tisch-Markup (ohne Phaser, einzeln testbar) | `src/host/tableHtml.ts` |
-| Kartenbilder als HTML | `src/host/cardHtml.ts` |
-| Intro- und Ergebnisbildschirm | `src/host/roundScreens.ts` |
-| Controller-Modell | `src/controller/index.ts` |
-| KI-Sitze, Antrieb, generischer Bot | `src/bots/{botSeats,driver,fallback,tactics}.ts` |
+**One human is enough to start.** Rulesets declare a minimum seat count: Mau Mau needs two, Hearts three and Doppelkopf four. Missing seats are filled with AI automatically. The requested AI count can add seats above that minimum, within the game's player limit; humans take priority.
 
-Das Handkarten-Layout selbst (`card_hand`) liegt in der Plattform unter
-`apps/controller/src/controller-ui/layouts/CardHandLayout.tsx`, damit weitere
-Kartenspiele dieselbe Oberfläche verwenden können.
+AI seats have their own color, hand and game scores, with a turn delay of about 1.2 seconds. The driver asks the ruleset for an intent and submits it through the same play, draw or action functions used by humans.
 
-## Decks und Kartenbilder
+Tactics include saving Mau Mau wild cards, evaluating Schwimmen swaps, managing bids and trick targets, extending Number Rows, choosing Go Fish requests, and avoiding costly Hearts tricks. Rulesets without custom tactics use the generic legal-move fallback. Bots must not inspect opponents' hidden hands or teams; Doppelkopf bots do not have perfect partner knowledge. AI scores appear in Card Table results, not as players in the platform-wide leaderboard.
 
-`src/cards/deckPresets.ts` liefert fertige Decks und den Bauplan für eigene:
+## Installation
 
-| Deck | Karten | Auswahl im Host-Setup |
-| --- | --- | --- |
-| Französisches Blatt | 52 | ja |
-| Französisches Blatt + 2 Joker | 54 | ja |
-| Deutsches Blatt / Skat | 32 | ja |
-| Party-Deck (frei definiertes Beispiel) | 40 | ja |
-| Doppeldeck + 4 Joker | 108 | ja |
-| Stichwette-Blatt (52 + 4 Kronen + 4 Federn) | 60 | fest für Stichwette |
-| Zahlenblatt 1-20 | 80 | fest für Zahlenreihe |
-| Peter-Blatt (Französisch ohne Damen + 1 Peter) | 49 | fest für Schwarzer Peter |
-| Doppelkopf-Blatt (9 bis Ass, jede Karte doppelt) | 48 | fest für Doppelkopf |
+This is an optional Open Party Lab game package, not a standalone app. Install the platform's dependencies first, then run these commands in its checkout:
 
-Dazu drei Kartenbilder, die Host und Handy gemeinsam nutzen:
+```bash
+git clone https://github.com/Hartwich/card-table.git local-games/card-table
+npm install --prefix local-games/card-table
+npm run games:sync-local
+npm run dev:all
+```
 
-- **Klassisch** — weißes Blatt mit Serifen, Eckzeichen und echten Pips.
-- **Modern** — farbiges Feld mit großer Ziffer, aus einigen Metern noch lesbar.
-- **Klar** — sehr reduziert: riesige Zahl, kleines Farbzeichen. Passt gut zum
-  Zahlenblatt bis 20.
+Sync builds and links installed game packages and generates platform registries. Do not add static imports for optional games.
 
-Ein eigenes Deck entsteht mit `createCustomDeck({ id, label, suits, ranks })`.
-Farben, Symbole, Rangfolge und Punktwerte sind frei wählbar; Kartenbild und
-Rückseite werden daraus automatisch gerendert. Ränge dürfen für farblose Karten
-ein eigenes Symbol, eine Farbe und einen Mitteltext tragen — so entstehen Krone,
-Feder und Peter ohne Sonderfall in der Engine. Über `copies` je Karte entsteht
-ein Blatt mit Mehrfachkarten wie beim Doppelkopf.
+## Development
 
-## Ein neues Kartenspiel bauen
-
-Ein Regelwerk implementiert `CardRuleset` aus `src/rules/types.ts` und wird in
-`src/rules/index.ts` eingetragen. Danach steht es im Host-Setup zur Auswahl.
-
-Pflicht sind Kartenprüfung, Legen, Ziehen, Aktionen, Wertung und der Regeltext.
-Optional stehen bereit:
-
-| Haken | Wofür |
-| --- | --- |
-| `fixedDeckId` / `allowedDeckIds` | eigenes Blatt erzwingen oder die Auswahl einschränken |
-| `handSizeFor({ roundNumber, playerCount, configured })` | Handkarten pro Runde, z. B. steigend wie bei der Stichwette |
-| `setupRound(state, context)` | Aufbau nach dem Austeilen: Trumpf, Parteien, offene Tischkarten, leere Reihen |
-| `tableStacks(state, context)` | eigene Tischstapel statt der generischen Zonen |
-| `choiceForCard(state, context, cardId)` | Rückfrage vor dem Legen, z. B. Wunschfarbe, Tauschziel oder Mitspieler |
-| `privateNote(state, context, playerId)` | Hinweis, den nur dieser Spieler sieht |
-| `condition(state, context)` | Zusatzbedingung als Chip auf Host und Handy |
-| `seatStatus(state, context, playerId)` | kurzer Zustand am Sitzplatz, z. B. "Mau!" oder "2 Leben" |
-| `botMove(state, context, playerId)` | Taktik der KI-Spieler; ohne diesen Haken spielt der generische Bot |
-| `botActsOutOfTurn` | auch KI-Sitze fragen, die nicht am Zug sind (Zwischenrufe wie das Zweifeln bei Lügen) |
-| `minSeats` | Mindestbesetzung; fehlende Plätze füllt der Tisch mit KI-Sitzen auf |
-
-Eigene Lobby-Optionen braucht kein Zutun der Runtime: Sie reicht die
-Raumeinstellungen als `context.settings` durch, ein Regelwerk liest daraus mit
-`readSetting(context, key, fallback)`. So funktioniert die Doppelkopf-Option
-„Augen laufend zählen oder erst am Ende".
-
-Ein Stapel wird als **Haufen** oder als **Auslage** gezeichnet. Der Haufen ist
-die Voreinstellung: `cards[0]` liegt oben, sichtbar sind höchstens drei, stark
-überlappend — richtig für Nachzieh- und Ablagestapel. Die Auslage
-(`layout: "spread"`) zeigt **alle** Karten in genau der Reihenfolge des Modells
-und nur leicht überlappend — richtig für einen Stich, der vollständig auf dem
-Tisch liegen soll. Die Kartenbreite richtet sich nach dem Platzbedarf aller
-Stapel zusammen, nicht nach ihrer Anzahl.
-
-Die drei Stichspiele legen den fertigen Stich nicht sofort weg: Er bleibt als
-zweiter Stapel **Letzter Stich · <Name>** offen liegen, bis der nächste Stich
-komplett ist. Ohne das wäre er in derselben Sekunde verschwunden, in der die
-letzte Karte fällt — man hätte nie gesehen, was gespielt wurde und wer ihn
-bekommen hat. Erst danach wandert er in eine unsichtbare Archivzone; die
-Wertung hängt ohnehin nicht am Kartenort, sondern an den Zählern in `extra`.
-
-Server-Runtime, Spieltisch und Handkarten bleiben unverändert. Eigene Zonen
-(Stiche, Auslagen, Farbreihen, verdeckte Stapel) legt man im Tischzustand an;
-sie erscheinen automatisch als weitere Stapel. Ein Zug darf aus mehreren
-Aktionen bestehen — die Zahlenreihe gibt erst ab, wenn nichts mehr passt oder
-der Spieler „Fertig" drückt. Aktionen dürfen auch Spielern gehören, die nicht am
-Zug sind: bei Lügen darf jeder zweifeln.
-
-## Setup im Host-Lobby
-
-Die Auswahl richtet sich nach dem Regelwerk: Was gerade nichts bewirkt, wird gar
-nicht erst gezeigt.
-
-| Feld | Sichtbar bei |
-| --- | --- |
-| Regelwerk | immer — eines der zwölf |
-| Kartendeck | Mau-Mau, Schwimmen, Lügen, Fischen, Freies Spiel. Die übrigen bringen ihr eigenes Blatt mit |
-| Handkarten (3–12) | Mau-Mau, Lügen, Fischen, Freies Spiel. Schwimmen spielt immer mit drei, die Stichwette steigert selbst, der Rest teilt das ganze Blatt aus |
-| Augen zählen | nur Doppelkopf: laufend oder erst am Ende |
-| KI-Spieler (0–5) | immer |
-| Kartenbild | immer — Klassisch, Modern, Klar |
-| Unspielbare Karten ausgrauen | immer — standardmäßig an; ausgeschaltet bleiben die Regeln unverändert |
-| Mau-Mau-Hausregeln | nur Mau-Mau: Siebenen stapeln, Acht setzt aus, Neun dreht, Bube auf Bube und gezogene Karte sofort legen (jeweils standardmäßig an) |
-| Nach Strafziehen sofort legen | nur Mau-Mau — standardmäßig aus, unabhängig vom normalen Ziehen |
-| Symboljagd: Symbole / Kartenpensum | nur Symboljagd — 8, 9 oder 10 Symbole; ganzer Kartensatz (Standard) oder feste Zielanzahl |
-| Symboljagd: Karten pro Person | nur Symboljagd — 1–300, Standard 30; wirkt nur bei festem Kartenpensum |
-
-Bei aktivem **Nach Strafziehen sofort legen** darf nach +2 oder gestapelten
-+4/+6 genau eine passende Karte aus den gerade gezogenen Strafkarten gelegt
-werden. Alte Handkarten bleiben gesperrt. Alternativ ist Passen möglich; passt
-keine neue Karte, endet der Zug automatisch. Die eingeblendeten deutschen und
-englischen Regeln berücksichtigen die gewählten Hausregeln.
-
-Symboljagd kann eine Person ohne KI spielen. Die Abschlusszeit wird auf dem Server
-gemessen und auf Host und Handy eingefroren angezeigt: Pausen zählen nicht,
-Fehlklick-Sperren zählen mit. Beim festen Kartenpensum erhalten alle dieselbe
-Zielanzahl; verbrauchte Mittelkarten werden bei Bedarf wieder untergemischt.
-
-Möglich macht das `visibleWhen` im `lobbySetup` der Plattform: Ein Feld nennt
-das Feld, von dem es abhängt, und die Werte, bei denen es erscheint. Host und
-Handy werten dieselbe Regel aus (`isLobbyFieldVisible`).
-
-Während der Runde zeigt der Host die Buttons, die das Regelwerk liefert —
-je nach Spiel Ziehen, Fertig, Schieben, Klopfen, Zweifeln, Ablage mischen oder
-Runde beenden.
-
-## Entwicklung
+Inside this game repository:
 
 ```bash
 npm install
 npm run typecheck
 npm run build
 npm test
+npm run pack:dry-run
 ```
 
-Danach im Plattform-Repo:
+After changes, run `npm run games:sync-local` and `npm run typecheck` in the platform checkout.
 
-```bash
-npm run games:sync-local
-npm run typecheck
-npm run dev:all
-```
+| Component | Location |
+| --- | --- |
+| Deck definitions | `src/cards/deckPresets.ts` |
+| Table engine: piles, hands, zones and turns | `src/cards/cardTable.ts` |
+| SVG card faces and styles | `src/cards/cardSvg.ts` |
+| Ruleset contract and implementations | `src/rules/types.ts`, `src/rules/*.ts` |
+| Ruleset registry | `src/rules/index.ts` |
+| Authoritative runtime | `src/server/index.ts` |
+| Host integration and table markup | `src/host/index.ts`, `src/host/tableHtml.ts` |
+| Host cards and round screens | `src/host/cardHtml.ts`, `src/host/roundScreens.ts` |
+| Controller model | `src/controller/index.ts` |
+| AI seats, driver, fallback and tactics | `src/bots/` |
+| Game protocol | `src/protocol.ts` |
 
-## Bekannte Grenzen
+The reusable `card_hand` layout belongs to the platform at `apps/controller/src/controller-ui/layouts/CardHandLayout.tsx`. Reuse it before adding another layout. Keep this game's protocol synchronized with the platform's `packages/protocol/src/games/cardTable.ts`.
 
-Rundenfortsetzung: Am Handy erscheint nach dem Ergebnis „Bereit“. Sobald alle
-Menschen bereit sind, startet die nächste Runde; KI-Sitze warten nicht auf eine
-Bestätigung. Punkte werden innerhalb desselben Regelwerks weitergeführt.
-Stichwette beginnt jede neue Serie mit einer Karte und erhöht die Kartenzahl je
-Runde bis zur vollen Austeilung. „Hauptmenü“ am Host beendet die Serie und führt
-zur Spielauswahl zurück.
+### Add a ruleset
 
-Regelprüfung: Mau-Mau erzwingt Strafziehen und erlaubt nach dem Ziehen nur die
-neue Karte. Schwimmen erkennt auch ausgeteilte 31. Herzeln erhält bei ungleicher
-Teilung alle Strafkarten und begrenzt Strafabwürfe im ersten Stich. Bei Lügen
-bleibt die letzte Karte anfechtbar; der nächste Spieler kann sie akzeptieren.
-Fischen beendet auch das letzte gezogene Quartett und wertet Gleichstände.
-Schwimmen bleibt die im Regeltext beschriebenen Varianten.
+1. Implement `CardRuleset` in `src/rules/<game>.ts`. `freePlay.ts` is the smallest example; `mauMau.ts` demonstrates special cards and choices.
+2. Register it in `src/rules/index.ts` and add its selection in `src/manifest.ts`.
+3. Supply German and English rules, seat limits and applicable setup fields.
+4. Run typecheck, build and relevant rule tests, then sync the platform.
 
-- Keine Ansagepflicht bei "Mau" — die letzte Karte wird nur angezeigt.
-- Außer Stichwette, Zahlenreihe, Herzeln und Doppelkopf geben alle Regelwerke nur einen Punkt
-  für den Rundensieg.
-- Schwimmen wechselt den Geber nicht, es beginnt immer der erste Sitzplatz.
-- Bei einer Krone als Trumpfkarte wählt der Geber der Stichwette die Trumpffarbe
-  am Handy vor den Ansagen.
-- Doppelkopf bietet Ansagen, Soli und mit beiden Kreuz-Damen direkt beim
-  Vorbehalt stille Hochzeit, erster Fehl oder erster Trumpf geht mit. Die stille
-  Hochzeit meldet öffentlich gesund; offene Hochzeiten suchen den Partner
-  innerhalb der ersten drei Stiche.
-- Herzeln schiebt vor der Runde keine Karten weiter.
-- Ein Haufen (`layout: "pile"`) zeigt höchstens drei Karten offen; eine Auslage
-  (`layout: "spread"`) zeigt alle, wird dafür aber schmaler, je mehr es sind.
-- Der Host-Tisch ist auf Querformat ausgelegt; unter etwa 1000 px Breite wird es
-  eng.
-- Die Denkpause der KI-Spieler ist fest (rund 1,2 Sekunden) und nicht einstellbar.
-- KI-Punkte erscheinen nur im Ergebnisbildschirm des Spiels, nicht in der
-  Rangliste der Plattform - die kennt ausschließlich echte Spieler.
-- Der Doppelkopf-Bot spielt ohne Partnerwissen; er sticht deshalb gelegentlich
-  den eigenen Partner ab.
-- `minSeats` füllt nach oben auf, deckelt aber nicht: Setzen sich fünf Menschen
-  an einen Doppelkopf-Tisch, läuft die Runde mit fünf Sitzen weiter, obwohl das
-  Spiel für vier gedacht ist.
+Use existing hooks for fixed or allowed decks, hand size, round setup, custom stacks, choices, private notes, conditions, seat status and AI tactics. Settings are passed as `context.settings`; setup fields use `visibleWhen` to hide ineffective options.
 
-## Rechte
+Table zones can represent tricks, melds, hidden piles or rows. A `pile` shows at most three overlapping cards; a `spread` shows all cards in model order. Completed tricks remain visible until the next trick is complete, then move to an archive zone. Scoring is separate from visual card locations.
 
-Alle Kartenbilder werden im Code als SVG erzeugt. Es werden keine externen
-Assets ausgeliefert.
+## Rounds and scoring
 
-Stichwette verwendet ein eigenes magisches Zahlenblatt (1–13, vier Farben, je vier Kronen und Federn). Geber und Startspieler wechseln; nach dem vollständigen Austeilen endet die Serie, Bereit beginnt wieder bei einer Karte und null Serienpunkten.
-Zahlenreihe verteilt 20/20/15/12/10 Karten bei 2/3/4/5/6 Spielern, startet mit der ersten vorhandenen Elf in Rot/Gelb/Grün/Blau und zieht bei fehlender Anlegemöglichkeit höchstens drei Karten einzeln. Eine passende gezogene Karte beendet nach dem Anlegen den Zug. Restliche Handwerte zählen negativ.
+Human players use **Ready** on their phones after a result. Once all humans are ready, the next round starts; AI seats do not wait for confirmation. Scores carry across rounds of the same ruleset, separately from general room scores. **Main menu** ends the series and returns to game selection.
 
-## Rommé
+**Trick Bets** uses an original four-suit deck, ranks 1–13, four Crowns and four Feathers. Dealer and starting player rotate. A revealed Crown requires the dealer to choose trump before bidding. The series grows from one card to a full deal; a fresh series resets its hand size and scores.
 
-The table includes a 108-card Rommé deck: two 52-card French packs and four jokers. Each player receives 13 cards; the first player gets 14 and opens the discard pile. Draw from stock or discard, select complete sets and runs from the phone, and lay 40 points to open. After opening, add melds to the shared table; finish your turn by discarding a card (a Joker only when it goes out). The first player to empty their hand receives 40 points plus opponents' deadwood, while everyone else loses their remaining card values. Rounds continue with scores carried by this ruleset.
+**Number Rows** deals 20/20/15/12/10 cards for 2/3/4/5/6 players. It opens with the first available eleven in red/yellow/green/blue priority and draws at most three cards individually when no move is available. Remaining hand values count negatively.
 
-Das Romméblatt besteht aus zwei französischen Blättern und vier Jokern. Die Erstauslage muss mindestens 40 Augen in gültigen Sätzen (gleicher Rang, unterschiedliche Farben) und/oder Folgen (mindestens drei aufeinanderfolgende Karten einer Farbe) enthalten. Asse dürfen niedrig oder hoch liegen, Folgen laufen nicht um die Ecke. Ein Joker ersetzt eine fehlende Karte und kann nach der Erstauslage gegen genau diese Karte getauscht werden; der Joker kommt dann auf die Hand und darf nicht abgeworfen werden. Nach der Erstauslage können Kombinationen ausgelegt und Tischmeldungen ergänzt werden. Wer seine letzte Karte abwirft, erhält 40 Punkte plus die Restwerte der anderen; die übrigen verlieren ihre Restwerte. Sind die Stapel aufgebraucht, gewinnt der niedrigste Restwert ohne Bonus, Gleichstände teilen das Ergebnis.
+**Rummy** uses two French packs and four jokers: 108 cards. Players receive 13 cards; the first gets 14 and opens the discard pile. Opening requires 40 points in valid sets or runs. Aces may be low or high; runs do not wrap. After opening, players may add or extend melds and exchange a joker for the exact card it represents. A returned joker cannot be discarded. Emptying the hand earns 40 points plus opponents' deadwood; opponents lose their remaining values. Exhausted piles resolve by lowest deadwood without a bonus, with ties sharing the result.
+
+## Known limitations
+
+- All games are alpha; physical-phone and sustained multiplayer usability still need validation.
+- Mau Mau does not enforce a spoken “Mau” announcement; it displays the one-card status.
+- Schwimmen does not rotate the dealer; the first seat starts.
+- Hearts does not pass cards before a round.
+- The host table is designed for landscape and becomes crowded below roughly 1000 pixels wide.
+- AI delay is fixed rather than configurable, and tactics are heuristic. Doppelkopf bots may take a partner's trick.
+- Piles display at most three face-up cards; use a spread when every card must be visible.
+
+## License and artwork
+
+This repository is licensed under the **Apache License 2.0**, matching the package's `Apache-2.0` metadata. See [LICENSE](LICENSE) for the full text. Dependencies retain their respective licenses.
+
+The game includes programmatically drawn SVG cards and original raster illustrations for Trick Bets and Symbol Hunt. Runtime images are under `public/host/card-table/` and `public/controller/card-table/`; additional source artwork is under `assets/`. The README screenshots show these actual renderers and assets. Do not add artwork with unclear usage rights.
