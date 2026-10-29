@@ -1,3 +1,4 @@
+import { localizeDeck } from "../cards/localization.js";
 import type { GameLobbySetupField } from "@open-party-lab/game-core";
 import {
   createBaseRoundState,
@@ -57,18 +58,18 @@ function resolveRuleset(context: ServerGameContext): CardRuleset {
 function resolveDeck(context: ServerGameContext, ruleset: CardRuleset): DeckDefinition {
   // Ein Regelwerk, das zwischen eigenen Blättern umschaltet, entscheidet selbst.
   if (ruleset.deckIdFor) {
-    return resolveCardDeck(ruleset.deckIdFor(context.roomSettings));
+    return localizeDeck(resolveCardDeck(ruleset.deckIdFor(context.roomSettings)), context.language);
   }
 
   if (ruleset.fixedDeckId) {
-    return resolveCardDeck(ruleset.fixedDeckId);
+    return localizeDeck(resolveCardDeck(ruleset.fixedDeckId), context.language);
   }
 
   const configured = readSetting(context, cardTableRoomSettingKeys.deck);
   const requested = typeof configured === "string" ? configured : ruleset.defaultDeckId;
   const allowed = !ruleset.allowedDeckIds || ruleset.allowedDeckIds.includes(requested);
 
-  return resolveCardDeck(allowed ? requested : ruleset.defaultDeckId);
+  return localizeDeck(resolveCardDeck(allowed ? requested : ruleset.defaultDeckId), context.language);
 }
 
 const cardStyles: CardTableCardStyle[] = ["classic", "modern", "clear"];

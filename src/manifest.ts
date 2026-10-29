@@ -1,3 +1,4 @@
+import { cardTableText } from "./catalogText.js";
 import type { GameManifest } from "@open-party-lab/game-core";
 import { resolveCardRuleset } from "./rules/index.js";
 import { resolveCardDeck } from "./cards/deckPresets.js";
@@ -43,6 +44,7 @@ export const cardTableRoomSettingKeys = {
 
 export const cardTableManifest = {
   id: "card-table",
+  translations: cardTableText,
   displayName: "Kartentisch",
     description:
       "Gemeinsamer Spieltisch für zwölf Kartenspiele: Mau-Mau, Schwimmen, Stichwette, Zahlenreihe, Lügen, Schwarzer Peter, Fischen, Herzeln, Doppelkopf, Rommé, Symboljagd und freies Spiel.",
