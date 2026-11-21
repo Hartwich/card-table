@@ -42,7 +42,7 @@ const livesKey = (playerId: string): string => `lives:${playerId}`;
 const knockerKey = "knockerId";
 const passKey = "passCount";
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<"de" | "en", Record<string, string>> = {
   de: {
     intro: "Schwimmen: Sammle möglichst viele Punkte in einer Farbe. 31 ist Feuer.",
     swapOne: "Tauschen",
@@ -104,7 +104,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
-  return copy[context.language] ?? copy.de;
+  return copy[context.language === "de" ? "de" : "en"];
 }
 
 /** Kartenwert nach Schwimmen-Zählung: 7-10 nach Zahl, Bilder 10, Ass 11. */
@@ -342,7 +342,7 @@ export const schwimmenRuleset: CardRuleset = {
   },
 
   rules(context) {
-    const en = context.language === "en";
+    const en = context.language !== "de";
 
     return en
       ? [
@@ -653,7 +653,7 @@ export const schwimmenRuleset: CardRuleset = {
     return [
       {
         id: tableZoneId,
-        label: context.language === "en" ? "Table cards" : "Tischkarten",
+        label: context.language !== "de" ? "Table cards" : "Tischkarten",
         kind: "zone",
         layout: "spread",
         count: cards.length,

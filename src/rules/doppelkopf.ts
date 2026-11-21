@@ -173,7 +173,7 @@ function reservationById(id: string): Reservation | undefined {
 /** Ansagestufen. 1 ist Re bzw. Kontra, darüber folgen die Absagen. */
 const announceLevels = [1, 2, 3, 4, 5] as const;
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<"de" | "en", Record<string, string>> = {
   de: {
     intro: "Doppelkopf: Erst der Vorbehalt - gesund, Hochzeit oder Solo.",
     reserveTitle: "Vorbehalt",
@@ -295,7 +295,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
-  return copy[context.language] ?? copy.de;
+  return copy[context.language === "de" ? "de" : "en"];
 }
 
 function reservationLabel(reservation: Reservation, context: CardRulesetContext): string {
@@ -1024,7 +1024,7 @@ export const doppelkopfRuleset: CardRuleset = {
   },
 
   rules(context) {
-    const en = context.language === "en";
+    const en = context.language !== "de";
 
     return en
       ? [

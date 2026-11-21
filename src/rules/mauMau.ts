@@ -40,7 +40,7 @@ export const mauMauRules = {
   drawTwoAmount: 2
 } as const;
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<CardRulesetContext["language"], Record<string, string>> = {
   de: {
     draw: "Ziehen",
     pass: "Weiter",
@@ -96,6 +96,90 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
     exhausted: "No cards left in the pile.",
     onlyDrawn: "After drawing, you may only play a card you just drew.",
     blocked: "Nobody can draw or play. The round ends without a winner."
+  },
+  "es": {
+    draw: "Robar",
+    pass: "Pasar",
+    recycle: "Volver a barajar",
+    end: "Terminar ronda",
+    notYourTurn: "No es tu turno.",
+    mustDraw: "Primero roba una carta.",
+    notInHand: "No tienes esa carta en la mano.",
+    mustSeven: "Juega un siete o roba las cartas de penalización.",
+    noMatch: "No coincide ni el palo ni el valor.",
+    needWish: "Elige el siguiente palo.",
+    played: "juega",
+    wished: "elige",
+    wishShort: "Palo elegido",
+    drew: "roba una carta",
+    drewMany: "roba",
+    cards: "cartas",
+    skipped: "pierde el turno",
+    reversed: "invierte el sentido",
+    passed: "pasa",
+    recycled: "Se volvió a barajar la pila de descartes.",
+    ended: "El anfitrión terminó la ronda.",
+    mau: "¡Mau!",
+    wins: "gana la ronda.",
+    exhausted: "No quedan cartas en la pila.",
+    onlyDrawn: "Después de robar, solo puedes jugar una carta que acabas de robar.",
+    blocked: "Nadie puede robar ni jugar. La ronda termina sin ganador.",
+  },
+  "fr": {
+    draw: "Piocher",
+    pass: "Passer",
+    recycle: "Remélanger",
+    end: "Terminer la manche",
+    notYourTurn: "Ce n’est pas ton tour.",
+    mustDraw: "Pioche d’abord une carte.",
+    notInHand: "Cette carte n’est pas dans ta main.",
+    mustSeven: "Pose un sept ou pioche les cartes de pénalité.",
+    noMatch: "Ni la couleur ni la valeur ne correspondent.",
+    needWish: "Choisis la couleur à jouer.",
+    played: "joue",
+    wished: "choisit",
+    wishShort: "Couleur choisie",
+    drew: "pioche une carte",
+    drewMany: "pioche",
+    cards: "cartes",
+    skipped: "passe son tour",
+    reversed: "inverse le sens",
+    passed: "passe",
+    recycled: "La défausse a été remélangée.",
+    ended: "L’hôte a terminé la manche.",
+    mau: "Mau !",
+    wins: "remporte la manche.",
+    exhausted: "Il ne reste plus de cartes dans la pioche.",
+    onlyDrawn: "Après avoir pioché, tu ne peux jouer qu’une carte que tu viens de piocher.",
+    blocked: "Plus personne ne peut piocher ni jouer. La manche se termine sans vainqueur.",
+  },
+  "pt-BR": {
+    draw: "Comprar",
+    pass: "Passar",
+    recycle: "Embaralhar descarte",
+    end: "Encerrar rodada",
+    notYourTurn: "Não é sua vez.",
+    mustDraw: "Compre uma carta primeiro.",
+    notInHand: "Essa carta não está na sua mão.",
+    mustSeven: "Jogue um sete ou compre as cartas da penalidade.",
+    noMatch: "Nem o naipe nem o valor coincidem.",
+    needWish: "Escolha o próximo naipe.",
+    played: "joga",
+    wished: "escolhe",
+    wishShort: "Naipe escolhido",
+    drew: "compra uma carta",
+    drewMany: "compra",
+    cards: "cartas",
+    skipped: "perde a vez",
+    reversed: "inverte o sentido",
+    passed: "passa",
+    recycled: "O monte de descarte foi embaralhado.",
+    ended: "O anfitrião encerrou a rodada.",
+    mau: "Mau!",
+    wins: "vence a rodada.",
+    exhausted: "Não restam cartas no monte.",
+    onlyDrawn: "Depois de comprar, você só pode jogar uma carta que acabou de comprar.",
+    blocked: "Ninguém pode comprar nem jogar. A rodada termina sem vencedor.",
   }
 };
 
@@ -151,7 +235,7 @@ export const mauMauRuleset: CardRuleset = {
   turnBased: true,
 
   rules(context) {
-    const en = context.language === "en";
+    const en = context.language !== "de";
     const playPenaltyDrawn = context.settings.cardTableMauPlayPenaltyDrawn === "on";
 
     return en
@@ -258,7 +342,7 @@ export const mauMauRuleset: CardRuleset = {
   },
 
   introMessage(context) {
-    return context.language === "en"
+    return context.language !== "de"
       ? "Mau Mau: match suit or rank. The selected house rules are shown in the rules."
       : "Mau-Mau: Farbe oder Wert bedienen. Die gewählten Hausregeln stehen in den Spielregeln.";
   },
@@ -294,12 +378,12 @@ export const mauMauRuleset: CardRuleset = {
     if (state.pendingDraw > 0) {
       return optionOn(context, "StackSevens") && mauMauRules.drawTwoRankIds.includes(card.rankId as never)
         ? { allowed: true }
-        : { allowed: false, hint: optionOn(context, "StackSevens") ? text.mustSeven as string : context.language === "en" ? "Draw the penalty cards." : "Ziehe die Strafkarten." };
+        : { allowed: false, hint: optionOn(context, "StackSevens") ? text.mustSeven as string : context.language !== "de" ? "Draw the penalty cards." : "Ziehe die Strafkarten." };
     }
 
     if (isWild(context.deck, card)) {
       if (!optionOn(context, "JackOnJack") && isWild(context.deck, top)) {
-        return { allowed: false, hint: context.language === "en" ? "No jack or joker on another jack or joker." : "Kein Bube oder Joker auf einen Buben oder Joker." };
+        return { allowed: false, hint: context.language !== "de" ? "No jack or joker on another jack or joker." : "Kein Bube oder Joker auf einen Buben oder Joker." };
       }
       return { allowed: true };
     }

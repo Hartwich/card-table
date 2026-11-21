@@ -1,4 +1,5 @@
 import type { CardTableActionState, CardTablePublicState, CardTableSeatState } from "../protocol.js";
+import type { SupportedLanguage } from "@open-party-lab/game-core";
 import { cardBackHtml, cardFaceHtml, escapeHtml, stackHtml } from "./cardHtml.js";
 
 /**
@@ -13,19 +14,18 @@ import { cardBackHtml, cardFaceHtml, escapeHtml, stackHtml } from "./cardHtml.js
  * jemand nachliest.
  */
 
-export type CardTableLanguage = "de" | "en";
+export type CardTableLanguage = SupportedLanguage;
 
 export function cardTableLabels(language?: CardTableLanguage) {
-  const en = language === "en";
-
-  return {
-    waiting: en ? "Waiting for the card table." : "Warte auf den Kartentisch.",
-    rules: en ? "Rules" : "Regeln",
-    lastTrick: en ? "Last trick" : "Letzter Stich",
-    bot: en ? "AI" : "KI",
-    close: en ? "Close" : "Schließen",
-    rulesFor: en ? "Rules" : "Spielregeln"
+  const locale = language ?? "de";
+  const labels: Record<SupportedLanguage, Record<string, string>> = {
+    de: { waiting: "Warte auf den Kartentisch.", rules: "Regeln", lastTrick: "Letzter Stich", bot: "KI", close: "Schließen", rulesFor: "Spielregeln" },
+    en: { waiting: "Waiting for the card table.", rules: "Rules", lastTrick: "Last trick", bot: "AI", close: "Close", rulesFor: "Rules" },
+    es: { waiting: "Esperando a la mesa de cartas.", rules: "Reglas", lastTrick: "Última baza", bot: "IA", close: "Cerrar", rulesFor: "Reglas" },
+    fr: { waiting: "En attente de la table de cartes.", rules: "Règles", lastTrick: "Dernier pli", bot: "IA", close: "Fermer", rulesFor: "Règles" },
+    "pt-BR": { waiting: "Aguardando a mesa de cartas.", rules: "Regras", lastTrick: "Última vaza", bot: "IA", close: "Fechar", rulesFor: "Regras" }
   };
+  return labels[locale];
 }
 
 /**

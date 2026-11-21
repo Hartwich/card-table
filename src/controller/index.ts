@@ -16,8 +16,7 @@ import {
   createCardTableDrawInput,
   createCardTablePlayInput
 } from "./cardTableBindings.js";
-
-type SupportedLanguage = "de" | "en";
+import type { SupportedLanguage } from "@open-party-lab/game-core";
 
 /**
  * Modell des generischen Handkarten-Layouts.
@@ -86,16 +85,25 @@ interface ControllerGameRenderContext {
   onInput(input: unknown): void;
 }
 
+const text = {
+  waiting: { de: "warte", en: "waiting", es: "esperando", fr: "en attente", "pt-BR": "aguardando" },
+  title: { de: "Kartentisch", en: "Card table", es: "Mesa de cartas", fr: "Table de cartes", "pt-BR": "Mesa de cartas" },
+  winner: { de: "Gewinner", en: "Winner", es: "Ganador", fr: "Vainqueur", "pt-BR": "Vencedor" },
+  roundOver: { de: "Runde beendet", en: "Round over", es: "Fin de la ronda", fr: "Fin de la manche", "pt-BR": "Fim da rodada" },
+  turn: { de: "Am Zug", en: "Turn", es: "Turno", fr: "À vous", "pt-BR": "Vez" },
+  playHint: { de: "Tippe eine Karte an, um sie zu legen.", en: "Tap a card to play it.", es: "Toca una carta para jugarla.", fr: "Touchez une carte pour la jouer.", "pt-BR": "Toque em uma carta para jogá-la." }
+};
+
 export function buildCardTableControllerModel(
   context: ControllerGameRenderContext
 ): CardHandLayoutModel {
   const { state, onInput } = context;
   const playerId = state.player?.id ?? "";
   const gameState = (state.game?.state ?? {}) as Partial<CardTableControllerState>;
-  const en = state.room?.language === "en";
+  const language = state.room?.language ?? "de";
   const playing = state.game?.phase === "playing";
   const canAct = Boolean(gameState.canAct && playing);
-  const activeName = gameState.activePlayerName ?? (en ? "waiting" : "warte");
+  const activeName = gameState.activePlayerName ?? text.waiting[language];
 
   return {
     kind: "card_hand",
@@ -107,16 +115,16 @@ export function buildCardTableControllerModel(
       ? symboljagdLayout(gameState.hand[0].cardId, gameState.hand[0].symbols?.length ?? 0)
       : undefined,
     symboljagdFeedback: gameState.symboljagdFeedback,
-    title: gameState.title ?? (en ? "Card table" : "Kartentisch"),
+    title: gameState.title ?? text.title[language],
     subtitle: gameState.gameOver
       ? gameState.winnerName
-        ? `${en ? "Winner" : "Gewinner"}: ${gameState.winnerName}`
-        : en ? "Round over" : "Runde beendet"
-      : `${en ? "Turn" : "Am Zug"}: ${activeName}`,
+        ? `${text.winner[language]}: ${gameState.winnerName}`
+        : text.roundOver[language]
+      : `${text.turn[language]}: ${activeName}`,
     helperText:
       gameState.lastError ??
       state.game?.message ??
-      (en ? "Tap a card to play it." : "Tippe eine Karte an, um sie zu legen."),
+      text.playHint[language],
     language: state.room?.language,
     disabled: !canAct,
     canAct,

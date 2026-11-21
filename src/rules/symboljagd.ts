@@ -92,16 +92,16 @@ export const symboljagdRuleset: CardRuleset = {
     };
   },
   introMessage(context) {
-    return context.language === "en"
+    return context.language !== "de"
       ? "Find the matching picture on your card and the center card. Tap that picture right on your card."
       : "Finde das gemeinsame Bild auf deiner Karte und der Mitte. Tippe das Bild direkt auf deiner Karte an.";
   },
   rules(context) {
     const target = cardTarget(context.settings);
     const goal = target === undefined
-      ? (context.language === "en" ? "Be the first to play all your cards." : "Lege als Erste oder Erster alle eigenen Karten ab.")
-      : (context.language === "en" ? `Everyone must play ${target} cards. The first to finish wins. Old center cards are shuffled back into the reserve when it runs out.` : `Alle müssen ${target} Karten ablegen. Wer zuerst fertig ist, gewinnt. Ist der Vorrat leer, werden alte Mittelkarten wieder untergemischt.`);
-    return context.language === "en" ? [
+      ? (context.language !== "de" ? "Be the first to play all your cards." : "Lege als Erste oder Erster alle eigenen Karten ab.")
+      : (context.language !== "de" ? `Everyone must play ${target} cards. The first to finish wins. Old center cards are shuffled back into the reserve when it runs out.` : `Alle müssen ${target} Karten ablegen. Wer zuerst fertig ist, gewinnt. Ist der Vorrat leer, werden alte Mittelkarten wieder untergemischt.`);
+    return context.language !== "de" ? [
       { title: "Goal", lines: [goal, "With one player and zero AI players, play solo against the clock. Your time runs from the start of play to your last card; pauses are excluded, wrong-answer lockouts count."] },
       { title: "How to play", lines: ["Everyone plays at once. Compare your top card with the center card: exactly one picture matches.", "Tap the matching picture directly on your card. A correct answer puts your card in the center and reveals your next card.", "A wrong answer locks you for 5 seconds, or until any player solves the current card.", "If another player solves the card first, a matching picture from that previous center card carries no penalty for 2 seconds, even if your phone has already received the new card. Inputs explicitly referring to an old center card are ignored."] }
     ] : [
@@ -112,12 +112,12 @@ export const symboljagdRuleset: CardRuleset = {
   canPlayCard(state, context, playerId, cardId) {
     const hand = handOf(state.table, playerId);
     if (state.gameOver || state.phase !== "playing" || hand[0] !== cardId) return { allowed: false };
-    if (blockedUntil(state, playerId) > context.now) return { allowed: false, hint: context.language === "en" ? "You are briefly locked out." : "Du bist kurz gesperrt." };
+    if (blockedUntil(state, playerId) > context.now) return { allowed: false, hint: context.language !== "de" ? "You are briefly locked out." : "Du bist kurz gesperrt." };
     return { allowed: true };
   },
   tableStacks(state, context): CardTableStackState[] {
     const cards = state.table.zones[centerZone] ?? [];
-    return [{ id: centerZone, label: context.language === "en" ? "Center" : "Mitte", kind: "zone", count: cards.length, cards: toCardFaces(context.deck, state.table, cards), faceDown: false }];
+    return [{ id: centerZone, label: context.language !== "de" ? "Center" : "Mitte", kind: "zone", count: cards.length, cards: toCardFaces(context.deck, state.table, cards), faceDown: false }];
   },
   playCard(state, context, playerId, cardId, choiceId) {
     const hand = handOf(state.table, playerId);
@@ -145,7 +145,7 @@ export const symboljagdRuleset: CardRuleset = {
         ...state,
         extra: { ...state.extra, [blockedKey(playerId)]: context.now + wrongAnswerLockMs },
         updatedAt: context.now,
-        message: context.language === "en" ? `${playerName(context, playerId)} picked the wrong picture.` : `${playerName(context, playerId)} hat das falsche Bild gewählt.`
+        message: context.language !== "de" ? `${playerName(context, playerId)} picked the wrong picture.` : `${playerName(context, playerId)} hat das falsche Bild gewählt.`
       };
     }
 
@@ -182,10 +182,10 @@ export const symboljagdRuleset: CardRuleset = {
     const next = { ...state, table, extra, updatedAt: context.now, message: `${playerName(context, playerId)}: ${names[Number(symbolId)] ?? symbolId}` };
     if (remaining === 0 && table.turnOrder.length === 1 && state.bots.length === 0) {
       extra.symboljagdSoloTimeMs = Math.max(0, context.now - (state.startedAt ?? context.now));
-      return finishGame(next, playerId, playerName(context, playerId), context.language === "en" ? "All cards completed!" : "Alle Karten abgelegt!");
+      return finishGame(next, playerId, playerName(context, playerId), context.language !== "de" ? "All cards completed!" : "Alle Karten abgelegt!");
     }
     return remaining === 0
-      ? finishGame(next, playerId, playerName(context, playerId), context.language === "en" ? `${playerName(context, playerId)} wins!` : `${playerName(context, playerId)} gewinnt!`)
+      ? finishGame(next, playerId, playerName(context, playerId), context.language !== "de" ? `${playerName(context, playerId)} wins!` : `${playerName(context, playerId)} gewinnt!`)
       : next;
   },
   drawCard(state) { return state; },
@@ -199,13 +199,13 @@ export const symboljagdRuleset: CardRuleset = {
     if (!playerId || !centerId || !symboljagdRuleset.canPlayCard(state, context, playerId, cardId).allowed) return undefined;
     return {
       id: `symboljagd:${centerId}`,
-      label: context.language === "en" ? "Tap the matching picture" : "Tippe das passende Bild",
-      options: symbols(state, cardId).map((id) => ({ id: `${centerId}|${id}${typeof state.extra[targetKey] === "number" ? `|${state.extra.symboljagdChallengeSerial}` : ""}`, label: (context.language === "en" ? namesEn : names)[Number(id)] ?? id, symbolImage: id }))
+      label: context.language !== "de" ? "Tap the matching picture" : "Tippe das passende Bild",
+      options: symbols(state, cardId).map((id) => ({ id: `${centerId}|${id}${typeof state.extra[targetKey] === "number" ? `|${state.extra.symboljagdChallengeSerial}` : ""}`, label: (context.language !== "de" ? namesEn : names)[Number(id)] ?? id, symbolImage: id }))
     };
   },
   condition() { return undefined; },
   seatStatus(state, context, playerId) {
-    return blockedUntil(state, playerId) > context.now ? (context.language === "en" ? "Wrong picture · locked" : "Falsches Bild · gesperrt") : undefined;
+    return blockedUntil(state, playerId) > context.now ? (context.language !== "de" ? "Wrong picture · locked" : "Falsches Bild · gesperrt") : undefined;
   },
   tick(state, context) {
     const extra = { ...state.extra };
@@ -223,7 +223,7 @@ export const symboljagdRuleset: CardRuleset = {
   privateNote(state, context, playerId) {
     const remaining = blockedUntil(state, playerId) - context.now;
     if (remaining <= 0) return undefined;
-    return context.language === "en" ? `Locked for ${Math.ceil(remaining / 1000)}s or until the next match.` : `Gesperrt: ${Math.ceil(remaining / 1000)} s oder bis zum nächsten Treffer.`;
+    return context.language !== "de" ? `Locked for ${Math.ceil(remaining / 1000)}s or until the next match.` : `Gesperrt: ${Math.ceil(remaining / 1000)} s oder bis zum nächsten Treffer.`;
   },
   botMove(state, context, playerId) {
     if (blockedUntil(state, playerId) > context.now) return { kind: "wait" };

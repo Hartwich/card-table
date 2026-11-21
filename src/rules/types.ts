@@ -113,7 +113,7 @@ export interface CardTableCondition {
  */
 export interface CardRuleset {
   id: string;
-  label: Record<SupportedLanguage, string>;
+  label: Record<"de" | "en", string>;
   defaultDeckId: string;
   defaultHandSize: number;
   /** Zeigt nur die obersten Karten einer privaten Hand im Controller. */

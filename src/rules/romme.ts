@@ -138,7 +138,7 @@ function bestCombination(ids: string[], state: CardGameState, context: CardRules
 }
 
 function finishDeal(state: CardGameState, context: CardRulesetContext, winner: string | null): CardGameState {
-  const text = context.language === "en" ? "wins the deal." : "gewinnt den Durchgang.";
+  const text = context.language !== "de" ? "wins the deal." : "gewinnt den Durchgang.";
   const deadwood = new Map(state.table.turnOrder.map(id => [id, handValue(state, context, id)]));
   const scores = state.table.turnOrder.map(id => {
     const delta = winner ? id === winner ? state.table.turnOrder.filter(other => other !== id).reduce((sum, other) => sum + (deadwood.get(other) ?? 0), 0) + 40 : -(deadwood.get(id) ?? 0) : -(deadwood.get(id) ?? 0);
@@ -147,8 +147,8 @@ function finishDeal(state: CardGameState, context: CardRulesetContext, winner: s
   const top = Math.max(...scores.map(score => score.delta));
   const winnerIds = scores.filter(score => score.delta === top).map(score => score.playerId);
   const winners = winnerIds.map(id => playerName(context, id));
-  const next = writeExtra(state, { scoreEntries: JSON.stringify(scores), scoreBreakdown: JSON.stringify(scores.map(score => `${playerName(context, score.playerId)}: ${score.delta > 0 ? "+" : ""}${score.delta} (${context.language === "en" ? "hand" : "Hand"}: ${deadwood.get(score.playerId)})`)) });
-  return finishGame(next, winnerIds.length === 1 ? winnerIds[0]! : null, winners.join(" & "), winner ? `${playerName(context, winner)} ${text}` : (context.language === "en" ? `Stock exhausted. ${winners.join(" & ")} share the lowest deadwood.` : `Stapel leer. ${winners.join(" & ")} teilen sich den niedrigsten Restwert.`));
+  const next = writeExtra(state, { scoreEntries: JSON.stringify(scores), scoreBreakdown: JSON.stringify(scores.map(score => `${playerName(context, score.playerId)}: ${score.delta > 0 ? "+" : ""}${score.delta} (${context.language !== "de" ? "hand" : "Hand"}: ${deadwood.get(score.playerId)})`)) });
+  return finishGame(next, winnerIds.length === 1 ? winnerIds[0]! : null, winners.join(" & "), winner ? `${playerName(context, winner)} ${text}` : (context.language !== "de" ? `Stock exhausted. ${winners.join(" & ")} share the lowest deadwood.` : `Stapel leer. ${winners.join(" & ")} teilen sich den niedrigsten Restwert.`));
 }
 
 function drawFromDiscard(tableState: CardGameState["table"], playerId: string): CardGameState["table"] {
@@ -175,7 +175,7 @@ export const rommeRuleset: CardRuleset = {
     return { ...state, table: { ...state.table, drawPile, discardPile: [], zones: {}, activeIndex: leaderIndex, hands: { ...state.table.hands, [leaderId]: [...handOf(state.table, leaderId), ...(extraCard ? [extraCard] : [])] } }, extra: { ...state.extra, [phaseKey]: "opening-discard", [selectedKey]: "", [openedKey]: "", [turnKey]: 0 } };
   },
   rules(context) {
-    return context.language === "en" ? [
+    return context.language !== "de" ? [
       { title: "Goal", lines: ["Be the first to empty your hand by laying valid melds and discarding your last card.", "At the end of a deal, opponents lose the value left in their hands; the player going out earns those points plus 40."] },
       { title: "Cards and deal", lines: ["Two 52-card packs and four jokers (108 cards). Two to six players receive 13 cards; the starting player gets one extra and opens the discard pile.", "The dealer rotates clockwise. Remaining cards form the face-down stock."] },
       { title: "Your turn", lines: ["After the opening discard, draw one card from the stock or take the top discard. Select cards on your phone and lay valid melds; after your first lay, you may also add cards to any meld.", "Finish by discarding a card. A Joker may only be discarded as the final card that ends the deal. If the stock is empty, the discard pile is shuffled back except for its top card."] },
@@ -190,9 +190,9 @@ export const rommeRuleset: CardRuleset = {
     ];
   },
   canPlayCard(state, context, playerId, cardId) {
-    if (!active(state, playerId) || !["discard", "opening-discard"].includes(phase(state))) return { allowed: false, hint: context.language === "en" ? "Draw and finish melding first." : "Ziehe und beende erst das Auslegen." };
+    if (!active(state, playerId) || !["discard", "opening-discard"].includes(phase(state))) return { allowed: false, hint: context.language !== "de" ? "Draw and finish melding first." : "Ziehe und beende erst das Auslegen." };
     if (!handOf(state.table, playerId).includes(cardId)) return { allowed: false };
-    if (state.table.cards[cardId]?.rankId === "joker" && handOf(state.table, playerId).length > 1) return { allowed: false, hint: context.language === "en" ? "A Joker can only be your final discard." : "Einen Joker darfst du nur als letzte Karte abwerfen." };
+    if (state.table.cards[cardId]?.rankId === "joker" && handOf(state.table, playerId).length > 1) return { allowed: false, hint: context.language !== "de" ? "A Joker can only be your final discard." : "Einen Joker darfst du nur als letzte Karte abwerfen." };
     return { allowed: true };
   },
   playCard(state, context, playerId, cardId) {
@@ -202,11 +202,11 @@ export const rommeRuleset: CardRuleset = {
     const next = { ...state, table, turnNumber: state.turnNumber + 1, drawnThisTurn: 0, updatedAt: context.now };
     if (phase(state) === "opening-discard") {
       table = { ...table, activeIndex: (table.activeIndex + 1) % table.turnOrder.length };
-      return writeExtra(appendLog(clearError({ ...next, table }), playerName(context, playerId), context.language === "en" ? "opened the discard pile." : "eröffnet den Ablagestapel."), { [phaseKey]: "draw", [selectedKey]: "" });
+      return writeExtra(appendLog(clearError({ ...next, table }), playerName(context, playerId), context.language !== "de" ? "opened the discard pile." : "eröffnet den Ablagestapel."), { [phaseKey]: "draw", [selectedKey]: "" });
     }
     table = { ...table, activeIndex: (table.activeIndex + 1) % table.turnOrder.length };
     const result = writeExtra({ ...next, table }, { [phaseKey]: "draw", [selectedKey]: "", [turnKey]: Number(state.extra[turnKey] ?? 0) + 1 });
-    return handOf(table, playerId).length === 0 ? finishDeal(result, context, playerId) : appendLog(clearError(result), playerName(context, playerId), context.language === "en" ? "discarded and ended the turn." : "wirft ab und beendet den Zug.");
+    return handOf(table, playerId).length === 0 ? finishDeal(result, context, playerId) : appendLog(clearError(result), playerName(context, playerId), context.language !== "de" ? "discarded and ended the turn." : "wirft ab und beendet den Zug.");
   },
   drawCard(state, context, playerId) {
     if (!active(state, playerId) || phase(state) !== "draw") return state;
@@ -233,23 +233,23 @@ export const rommeRuleset: CardRuleset = {
       if (!ids.length || ids.some(id => !handOf(state.table, playerId).includes(id))) return state;
       const groups = bestCombination(ids, state, context);
       const total = groups.reduce((sum, group) => sum + group.points, 0);
-      if (!groups.length || groups.reduce((sum, group) => sum + group.ids.length, 0) !== ids.length) return withError(state, context.language === "en" ? "Those cards do not form complete melds." : "Diese Karten ergeben keine vollständigen Kombinationen.");
-      if (!opened(state, playerId) && total < 40) return withError(state, context.language === "en" ? "Your first meld must total 40 points." : "Deine Erstauslage muss 40 Augen erreichen.");
-      if (handOf(state.table, playerId).length - ids.length < 1) return withError(state, context.language === "en" ? "Keep one card to discard." : "Behalte eine Karte zum Abwerfen.");
+      if (!groups.length || groups.reduce((sum, group) => sum + group.ids.length, 0) !== ids.length) return withError(state, context.language !== "de" ? "Those cards do not form complete melds." : "Diese Karten ergeben keine vollständigen Kombinationen.");
+      if (!opened(state, playerId) && total < 40) return withError(state, context.language !== "de" ? "Your first meld must total 40 points." : "Deine Erstauslage muss 40 Augen erreichen.");
+      if (handOf(state.table, playerId).length - ids.length < 1) return withError(state, context.language !== "de" ? "Keep one card to discard." : "Behalte eine Karte zum Abwerfen.");
       let table = state.table;
       for (const group of groups) {
         const zoneId = `${zonePrefix}${Object.keys(table.zones).filter(key => key.startsWith(zonePrefix)).length + 1}`;
         table = { ...table, zones: { ...table.zones, [zoneId]: [] } };
         for (const id of group.ids) table = moveCard(table, id, { kind: "zone", zoneId }, "bottom");
       }
-      return writeExtra(appendLog(clearError({ ...state, table, updatedAt: context.now }), playerName(context, playerId), context.language === "en" ? `laid ${groups.length} meld${groups.length === 1 ? "" : "s"}.` : `legt ${groups.length} Kombination${groups.length === 1 ? "" : "en"} aus.`), { [openedKey]: [...new Set([...readText(state, openedKey)?.split(",").filter(Boolean) ?? [], playerId])].join(","), [selectedKey]: "", [phaseKey]: "discard" });
+      return writeExtra(appendLog(clearError({ ...state, table, updatedAt: context.now }), playerName(context, playerId), context.language !== "de" ? `laid ${groups.length} meld${groups.length === 1 ? "" : "s"}.` : `legt ${groups.length} Kombination${groups.length === 1 ? "" : "en"} aus.`), { [openedKey]: [...new Set([...readText(state, openedKey)?.split(",").filter(Boolean) ?? [], playerId])].join(","), [selectedKey]: "", [phaseKey]: "discard" });
     }
     if (actionId.startsWith("add:" ) && phase(state) === "meld" && opened(state, playerId)) {
       const index = Number(actionId.slice(4)); const zoneId = allMelds(state)[index]; const ids = selected(state);
       if (!zoneId || !ids.length || ids.some(id => !handOf(state.table, playerId).includes(id))) return state;
       const combined = [...(state.table.zones[zoneId] ?? []), ...ids];
-      if (!meld(combined, state, context)) return withError(state, context.language === "en" ? "Those cards do not extend that meld." : "Diese Karten ergänzen die Auslage nicht gültig.");
-      if (handOf(state.table, playerId).length - ids.length < 1) return withError(state, context.language === "en" ? "Keep one card to discard." : "Behalte eine Karte zum Abwerfen.");
+      if (!meld(combined, state, context)) return withError(state, context.language !== "de" ? "Those cards do not extend that meld." : "Diese Karten ergänzen die Auslage nicht gültig.");
+      if (handOf(state.table, playerId).length - ids.length < 1) return withError(state, context.language !== "de" ? "Keep one card to discard." : "Behalte eine Karte zum Abwerfen.");
       let table = state.table; for (const id of ids) table = moveCard(table, id, { kind: "zone", zoneId }, "bottom");
       return writeExtra({ ...state, table, updatedAt: context.now }, { [selectedKey]: "", [phaseKey]: "discard" });
     }
@@ -258,7 +258,7 @@ export const rommeRuleset: CardRuleset = {
       const ids = selected(state);
       if (!zoneId || ids.length !== 1 || !handOf(state.table, playerId).includes(ids[0]!)) return state;
       const substitute = jokerTargets(state.table.zones[zoneId] ?? [], state, context).find(item => item.suitId === state.table.cards[ids[0]!]?.suitId && item.rankId === state.table.cards[ids[0]!]?.rankId);
-      if (!substitute) return withError(state, context.language === "en" ? "That card does not replace a Joker there." : "Diese Karte ersetzt dort keinen Joker.");
+      if (!substitute) return withError(state, context.language !== "de" ? "That card does not replace a Joker there." : "Diese Karte ersetzt dort keinen Joker.");
       let table = moveCard(state.table, ids[0]!, { kind: "zone", zoneId }, "bottom");
       table = moveCard(table, substitute.jokerId, { kind: "hand", playerId }, "bottom");
       return writeExtra({ ...state, table, updatedAt: context.now }, { [selectedKey]: "" });
@@ -273,19 +273,19 @@ export const rommeRuleset: CardRuleset = {
     if (state.gameOver || state.phase !== "playing") return [];
     const isTurn = active(state, playerId); const current = selected(state);
     if (phase(state) === "draw") return [
-      { id: "draw", label: context.language === "en" ? "Draw from stock → hand" : "Vom Nachziehstapel → Hand", kind: "primary", enabled: isTurn && state.table.drawPile.length > 0 },
-      { id: "take-discard", label: context.language === "en" ? "Take top discard → hand" : "Oberste Ablage → Hand", kind: "secondary", enabled: isTurn && state.table.discardPile.length > 0 }
+      { id: "draw", label: context.language !== "de" ? "Draw from stock → hand" : "Vom Nachziehstapel → Hand", kind: "primary", enabled: isTurn && state.table.drawPile.length > 0 },
+      { id: "take-discard", label: context.language !== "de" ? "Take top discard → hand" : "Oberste Ablage → Hand", kind: "secondary", enabled: isTurn && state.table.discardPile.length > 0 }
     ];
     const cards = handOf(state.table, playerId).map(id => ({ id: `select:${id}`, label: `${current.includes(id) ? "✓ " : ""}${toCardFace(context.deck, state.table.cards[id]!).rankLabel} ${toCardFace(context.deck, state.table.cards[id]!).suitSymbol}`, kind: "secondary" as const, enabled: isTurn }));
-    if (phase(state) === "discard" || phase(state) === "opening-discard") return [...cards, { id: "discard-selected", label: phase(state) === "opening-discard" ? (context.language === "en" ? "Selected card → discard pile (start)" : "Ausgewählte Karte → Ablage eröffnen") : (context.language === "en" ? "Selected card → discard pile" : "Ausgewählte Karte → Ablagestapel"), kind: "primary", enabled: isTurn && current.length === 1 && (state.table.cards[current[0]!]?.rankId !== "joker" || handOf(state.table, playerId).length === 1) }];
+    if (phase(state) === "discard" || phase(state) === "opening-discard") return [...cards, { id: "discard-selected", label: phase(state) === "opening-discard" ? (context.language !== "de" ? "Selected card → discard pile (start)" : "Ausgewählte Karte → Ablage eröffnen") : (context.language !== "de" ? "Selected card → discard pile" : "Ausgewählte Karte → Ablagestapel"), kind: "primary", enabled: isTurn && current.length === 1 && (state.table.cards[current[0]!]?.rankId !== "joker" || handOf(state.table, playerId).length === 1) }];
     return [...cards,
-      { id: "lay-selected", label: context.language === "en" ? "Lay melds → table center" : "Kombination(en) → Tischmitte", kind: "primary", enabled: isTurn && current.length >= 3 },
-      { id: "finish-meld", label: context.language === "en" ? "Finish laying → discard a card" : "Auslegen beenden → Karte abwerfen", kind: "secondary", enabled: isTurn },
+      { id: "lay-selected", label: context.language !== "de" ? "Lay melds → table center" : "Kombination(en) → Tischmitte", kind: "primary", enabled: isTurn && current.length >= 3 },
+      { id: "finish-meld", label: context.language !== "de" ? "Finish laying → discard a card" : "Auslegen beenden → Karte abwerfen", kind: "secondary", enabled: isTurn },
       ...allMelds(state).flatMap((zoneId, index) => {
         const canReplace = current.length === 1 && jokerTargets(state.table.zones[zoneId] ?? [], state, context).some(item => item.suitId === state.table.cards[current[0]!]?.suitId && item.rankId === state.table.cards[current[0]!]?.rankId);
         return [
-          { id: `add:${index}`, label: context.language === "en" ? `Add to table meld ${index + 1}` : `An Tisch-Auslage ${index + 1} anlegen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) && current.length > 0 },
-          ...(canReplace ? [{ id: `replace:${index}`, label: context.language === "en" ? `Replace Joker in table meld ${index + 1}` : `Joker in Tisch-Auslage ${index + 1} tauschen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) }] : [])
+          { id: `add:${index}`, label: context.language !== "de" ? `Add to table meld ${index + 1}` : `An Tisch-Auslage ${index + 1} anlegen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) && current.length > 0 },
+          ...(canReplace ? [{ id: `replace:${index}`, label: context.language !== "de" ? `Replace Joker in table meld ${index + 1}` : `Joker in Tisch-Auslage ${index + 1} tauschen`, kind: "secondary" as const, enabled: isTurn && opened(state, playerId) }] : [])
         ];
       })
     ];
@@ -296,16 +296,16 @@ export const rommeRuleset: CardRuleset = {
   tableStacks(state, context): CardTableStackState[] {
     const faces = (ids: string[]) => ids.map(id => state.table.cards[id]).filter((card): card is CardInstance => Boolean(card)).map(card => toCardFace(context.deck, card));
     const stacks: CardTableStackState[] = [
-      { id: "romme-stock", label: context.language === "en" ? "Stock" : "Nachziehstapel", kind: "draw", count: state.table.drawPile.length, cards: [], faceDown: true },
-      { id: "romme-discard", label: context.language === "en" ? "Discard" : "Ablage", kind: "discard", count: state.table.discardPile.length, cards: faces(state.table.discardPile.slice(0, 3)), faceDown: false }
+      { id: "romme-stock", label: context.language !== "de" ? "Stock" : "Nachziehstapel", kind: "draw", count: state.table.drawPile.length, cards: [], faceDown: true },
+      { id: "romme-discard", label: context.language !== "de" ? "Discard" : "Ablage", kind: "discard", count: state.table.discardPile.length, cards: faces(state.table.discardPile.slice(0, 3)), faceDown: false }
     ];
-    for (const id of allMelds(state)) stacks.push({ id, label: `${context.language === "en" ? "Meld" : "Auslage"} ${id.slice(zonePrefix.length)}`, kind: "zone", count: state.table.zones[id]!.length, cards: faces(state.table.zones[id]!), faceDown: false, layout: "spread", capacity: 14 });
+    for (const id of allMelds(state)) stacks.push({ id, label: `${context.language !== "de" ? "Meld" : "Auslage"} ${id.slice(zonePrefix.length)}`, kind: "zone", count: state.table.zones[id]!.length, cards: faces(state.table.zones[id]!), faceDown: false, layout: "spread", capacity: 14 });
     return stacks;
   },
-  introMessage(context) { return context.language === "en" ? "Draw one, make melds, discard one." : "Ziehe eine Karte, lege Kombinationen aus und wirf eine ab."; },
-  condition(state, context) { return { label: phase(state) === "draw" ? (context.language === "en" ? "Draw" : "Ziehen") : phase(state) === "discard" ? (context.language === "en" ? "Discard" : "Abwerfen") : (context.language === "en" ? "Meld or lay" : "Auslegen"), symbol: "◆" }; },
-  privateNote(state, context, playerId) { const count = selected(state).filter(id => handOf(state.table, playerId).includes(id)).length; return `${context.language === "en" ? "Hand" : "Hand"}: ${handOf(state.table, playerId).length} · ${context.language === "en" ? "Selected" : "Markiert"}: ${count}${!opened(state, playerId) ? (context.language === "en" ? " · First meld 40" : " · Erstauslage 40") : ""}`; },
-  seatStatus(state, context, playerId) { return `${handOf(state.table, playerId).length} ${context.language === "en" ? "cards" : "Karten"}${opened(state, playerId) ? " · ✓" : ""}`; },
+  introMessage(context) { return context.language !== "de" ? "Draw one, make melds, discard one." : "Ziehe eine Karte, lege Kombinationen aus und wirf eine ab."; },
+  condition(state, context) { return { label: phase(state) === "draw" ? (context.language !== "de" ? "Draw" : "Ziehen") : phase(state) === "discard" ? (context.language !== "de" ? "Discard" : "Abwerfen") : (context.language !== "de" ? "Meld or lay" : "Auslegen"), symbol: "◆" }; },
+  privateNote(state, context, playerId) { const count = selected(state).filter(id => handOf(state.table, playerId).includes(id)).length; return `${context.language !== "de" ? "Hand" : "Hand"}: ${handOf(state.table, playerId).length} · ${context.language !== "de" ? "Selected" : "Markiert"}: ${count}${!opened(state, playerId) ? (context.language !== "de" ? " · First meld 40" : " · Erstauslage 40") : ""}`; },
+  seatStatus(state, context, playerId) { return `${handOf(state.table, playerId).length} ${context.language !== "de" ? "cards" : "Karten"}${opened(state, playerId) ? " · ✓" : ""}`; },
   isFinished(state) { return state.gameOver; },
   buildScore(state) {
     if (typeof state.extra.scoreEntries === "string") {

@@ -58,7 +58,7 @@ const tricksKey = (playerId: string): string => `tricks:${playerId}`;
 const noLead = "";
 const crownLead = "*";
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<"de" | "en", Record<string, string>> = {
   de: {
     intro: "Stichwette: Erst Stiche ansagen, dann spielen. Die Krone sticht alles, die Feder nichts.",
     bidPrompt: "Sag deine Stiche an.",
@@ -112,7 +112,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
-  return copy[context.language] ?? copy.de;
+  return copy[context.language === "de" ? "de" : "en"];
 }
 
 function isCrownCard(card: CardInstance): boolean {
@@ -215,7 +215,7 @@ function finishDeal(state: CardGameState, context: CardRulesetContext): CardGame
   const winners = ranked.filter(entry => entry.points === highest).map(entry => entry.id);
   bestPlayerId = winners.length === 1 ? winners[0]! : null;
   const names = winners.map(id => playerName(context, id)).join(" & ");
-  next = writeExtra(next, { seriesComplete: complete, scoreBreakdown: JSON.stringify(complete ? [context.language === "en" ? `Series complete. Winner: ${names}. Ready starts a new series with one card and zero points.` : `Serie beendet. Gewonnen: ${names}. Bereit startet eine neue Serie mit einer Karte und null Punkten.`] : []) });
+  next = writeExtra(next, { seriesComplete: complete, scoreBreakdown: JSON.stringify(complete ? [context.language !== "de" ? `Series complete. Winner: ${names}. Ready starts a new series with one card and zero points.` : `Serie beendet. Gewonnen: ${names}. Bereit startet eine neue Serie mit einer Karte und null Punkten.`] : []) });
   return finishGame(
     next,
     bestPlayerId,
@@ -284,7 +284,7 @@ export const trickBetRuleset: CardRuleset = {
   },
 
   rules(context) {
-    const en = context.language === "en";
+    const en = context.language !== "de";
 
     return en
       ? [
@@ -627,7 +627,7 @@ export const trickBetRuleset: CardRuleset = {
     return [
       {
         id: "end",
-        label: context.language === "en" ? "End deal" : "Durchgang beenden",
+        label: context.language !== "de" ? "End deal" : "Durchgang beenden",
         kind: "danger",
         enabled: state.phase === "playing" && !state.gameOver
       }

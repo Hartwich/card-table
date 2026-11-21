@@ -58,7 +58,7 @@ const queenRank = "queen";
 const noLead = "";
 const allPenalties = 26;
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<"de" | "en", Record<string, string>> = {
   de: {
     intro: "Herzeln: Stiche vermeiden. Jedes Herz zählt eins, die Pik-Dame dreizehn.",
     notYourTurn: "Du bist nicht am Zug.",
@@ -106,7 +106,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
-  return copy[context.language] ?? copy.de;
+  return copy[context.language === "de" ? "de" : "en"];
 }
 
 function penaltyOf(card: CardInstance): number {
@@ -273,7 +273,7 @@ export const herzelnRuleset: CardRuleset = {
   },
 
   rules(context): CardTableRuleSectionState[] {
-    const en = context.language === "en";
+    const en = context.language !== "de";
 
     return en
       ? [

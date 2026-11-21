@@ -27,7 +27,7 @@ import {
  * neue Kartenspiele und um Deck, Tisch und Handkarten auszuprobieren.
  */
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<"de" | "en", Record<string, string>> = {
   de: {
     intro: "Freier Kartentisch: jeder darf ziehen und ablegen.",
     draw: "Ziehen",
@@ -61,7 +61,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
-  return copy[context.language] ?? copy.de;
+  return copy[context.language === "de" ? "de" : "en"];
 }
 
 export const freePlayRuleset: CardRuleset = {
@@ -75,7 +75,7 @@ export const freePlayRuleset: CardRuleset = {
   turnBased: false,
 
   rules(context) {
-    const en = context.language === "en";
+    const en = context.language !== "de";
 
     return en
       ? [

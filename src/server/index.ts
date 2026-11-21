@@ -4,6 +4,7 @@ import {
   createBaseRoundState,
   roundPhaseDurations,
   transitionRoundState,
+  type LocalizedGameTextMap,
   type ScoreEntry,
   type ServerGame,
   type ServerGameContext
@@ -33,6 +34,15 @@ import {
   type CardRuleset,
   type CardRulesetContext
 } from "../rules/index.js";
+
+const translations: LocalizedGameTextMap = cardTableManifest.translations;
+const tableCopy = {
+  de: { draw: "Nachziehstapel", table: "Ablage", cards: "Karten" },
+  en: { draw: "Draw pile", table: "Table", cards: "cards" },
+  es: { draw: "Pila de robo", table: "Descarte", cards: "cartas" },
+  fr: { draw: "Pioche", table: "Défausse", cards: "cartes" },
+  "pt-BR": { draw: "Monte de compra", table: "Descarte", cards: "cartas" }
+};
 
 /**
  * Autoritative Kartentisch-Runtime.
@@ -289,7 +299,7 @@ function buildStacks(
   rulesetContext: CardRulesetContext,
   context: ServerGameContext
 ): CardTableStackState[] {
-  const en = context.language === "en";
+  const text = tableCopy[context.language] ?? tableCopy.de;
   const deck = rulesetContext.deck;
   const stacks: CardTableStackState[] = [];
 
@@ -298,7 +308,7 @@ function buildStacks(
   if (state.table.drawPile.length > 0) {
     stacks.push({
       id: "draw",
-      label: en ? "Draw pile" : "Nachziehstapel",
+      label: text.draw,
       kind: "draw",
       count: state.table.drawPile.length,
       cards: [],
@@ -309,7 +319,7 @@ function buildStacks(
   if (state.table.discardPile.length > 0) {
     stacks.push({
       id: "discard",
-      label: en ? "Table" : "Ablage",
+      label: text.table,
       kind: "discard",
       count: state.table.discardPile.length,
       cards: toCardStates(deck, state, state.table.discardPile.slice(0, visibleDiscardCards)),
@@ -390,8 +400,9 @@ function buildPublicState(state: CardGameState, context: ServerGameContext): Car
 
   return {
     rulesetId: ruleset.id,
-    title: ruleset.label[context.language] ?? ruleset.label.de,
-    deckLabel: `${deck.label} · ${countDeckCards(deck)} ${context.language === "en" ? "cards" : "Karten"}`,
+    title: translations[context.language]?.lobbySetup?.fields?.ruleset?.options?.[ruleset.id]?.label
+      ?? ruleset.label[context.language === "de" ? "de" : "en"],
+    deckLabel: `${deck.label} · ${countDeckCards(deck)} ${(tableCopy[context.language] ?? tableCopy.de).cards}`,
     backStyle: deck.backStyle ?? "classic",
     cardStyle: resolveCardStyle(context),
     rules: ruleset.rules(rulesetContext),

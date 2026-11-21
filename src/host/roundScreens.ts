@@ -2,6 +2,7 @@ import { cardTableManifest } from "../manifest.js";
 import type { CardTablePublicState } from "../protocol.js";
 import { escapeHtml } from "./cardHtml.js";
 import { formatCompletionTime } from "../timeFormat.js";
+import type { SupportedLanguage } from "@open-party-lab/game-core";
 
 /**
  * Runden-Intro und Ergebnis.
@@ -21,7 +22,7 @@ export interface RoundScreenStateLike {
     state?: unknown;
   } | null;
   room?: {
-    language?: "de" | "en";
+    language?: SupportedLanguage;
     players?: Array<{ id: string; name: string; color: string; connected: boolean }>;
   } | null;
   scoreboard?: {
@@ -29,24 +30,15 @@ export interface RoundScreenStateLike {
   } | null;
 }
 
-function labels(language?: "de" | "en") {
-  const en = language === "en";
-
-  return {
-    shuffling: en ? "The deck is being shuffled" : "Die Karten werden gemischt",
-    players: en ? "Players" : "Spieler",
-    deck: en ? "Deck" : "Deck",
-    result: en ? "Round result" : "Rundenergebnis",
-    winner: en ? "Winner" : "Gewonnen hat",
-    soloResult: en ? "All cards completed!" : "Alle Karten abgelegt!",
-    time: en ? "Your time" : "Deine Zeit",
-    noWinner: en ? "No winner this round." : "Niemand hat diese Runde gewonnen.",
-    points: en ? "pts" : "Pkt.",
-    bot: en ? "AI" : "KI",
-    next: en ? "Ready on your phone to play the next round." : "Am Handy bereit machen, um die nächste Runde zu spielen.",
-    menu: en ? "Main menu" : "Hauptmenü"
-    , scoreDetails: en ? "Score details" : "Wertungsaufschlüsselung"
+function labels(language: SupportedLanguage = "de") {
+  const copy: Record<SupportedLanguage, Record<string, string>> = {
+    de: { shuffling: "Die Karten werden gemischt", players: "Spieler", deck: "Deck", result: "Rundenergebnis", winner: "Gewonnen hat", soloResult: "Alle Karten abgelegt!", time: "Deine Zeit", noWinner: "Niemand hat diese Runde gewonnen.", points: "Pkt.", bot: "KI", next: "Am Handy bereit machen, um die nächste Runde zu spielen.", menu: "Hauptmenü", scoreDetails: "Wertungsaufschlüsselung" },
+    en: { shuffling: "The deck is being shuffled", players: "Players", deck: "Deck", result: "Round result", winner: "Winner", soloResult: "All cards completed!", time: "Your time", noWinner: "No winner this round.", points: "pts", bot: "AI", next: "Ready on your phone to play the next round.", menu: "Main menu", scoreDetails: "Score details" },
+    es: { shuffling: "Se está barajando la baraja", players: "Jugadores", deck: "Baraja", result: "Resultado de la ronda", winner: "Ganador", soloResult: "¡Se completaron todas las cartas!", time: "Tu tiempo", noWinner: "No hubo ganador en esta ronda.", points: "pts", bot: "IA", next: "Prepárate en el móvil para la próxima ronda.", menu: "Menú principal", scoreDetails: "Detalles de puntuación" },
+    fr: { shuffling: "Le paquet est mélangé", players: "Joueurs", deck: "Paquet", result: "Résultat de la manche", winner: "Vainqueur", soloResult: "Toutes les cartes sont posées !", time: "Votre temps", noWinner: "Aucun vainqueur pour cette manche.", points: "pts", bot: "IA", next: "Préparez votre téléphone pour la prochaine manche.", menu: "Menu principal", scoreDetails: "Détail des scores" },
+    "pt-BR": { shuffling: "O baralho está sendo embaralhado", players: "Jogadores", deck: "Baralho", result: "Resultado da rodada", winner: "Vencedor", soloResult: "Todas as cartas foram concluídas!", time: "Seu tempo", noWinner: "Não houve vencedor nesta rodada.", points: "pts", bot: "IA", next: "Prepare o celular para jogar a próxima rodada.", menu: "Menu principal", scoreDetails: "Detalhes da pontuação" }
   };
+  return copy[language];
 }
 
 /** HTML für Intro oder Ergebnis, oder null solange gespielt wird. */

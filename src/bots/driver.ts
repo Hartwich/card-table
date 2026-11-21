@@ -82,7 +82,7 @@ function forceProgress(
         updatedAt: context.now
       },
       null,
-      context.language === "en" ? "Skipped an AI turn." : "KI-Zug übersprungen."
+      context.language !== "de" ? "Skipped an AI turn." : "KI-Zug übersprungen."
     ),
     null
   );

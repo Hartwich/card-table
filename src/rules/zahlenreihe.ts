@@ -48,7 +48,7 @@ function openingCard(state: CardGameState): string | undefined {
   return undefined;
 }
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<"de" | "en", Record<string, string>> = {
   de: {
     intro: "Zahlenreihe: Jede Farbreihe beginnt mit der 11, danach legst du nach oben oder unten an.",
     draw: "Ziehen",
@@ -104,7 +104,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
-  return copy[context.language] ?? copy.de;
+  return copy[context.language === "de" ? "de" : "en"];
 }
 
 function rankValue(card: CardInstance): number {
@@ -190,7 +190,7 @@ export const numberRowsRuleset: CardRuleset = {
   },
 
   rules(context): CardTableRuleSectionState[] {
-    const en = context.language === "en";
+    const en = context.language !== "de";
 
     return en
       ? [
@@ -299,7 +299,7 @@ export const numberRowsRuleset: CardRuleset = {
     const card = state.table.cards[cardId];
 
     if (typeof state.extra[openingKey] === "string" && cardId !== state.extra[openingKey]) {
-      return { allowed: false, hint: context.language === "en" ? "Play the starting eleven first." : "Lege zuerst die Start-Elf." };
+      return { allowed: false, hint: context.language !== "de" ? "Play the starting eleven first." : "Lege zuerst die Start-Elf." };
     }
 
     if (!card || !card.suitId) {
@@ -503,7 +503,7 @@ export const numberRowsRuleset: CardRuleset = {
 
   privateNote(state, context, playerId) {
     const drawn = isActive(state, playerId) && state.drawnThisTurn > 0
-      ? ` · ${context.language === "en" ? "Drawn" : "Gezogen"}: ${state.drawnThisTurn}/3` : "";
+      ? ` · ${context.language !== "de" ? "Drawn" : "Gezogen"}: ${state.drawnThisTurn}/3` : "";
     return `${words(context).playable}: ${playableCount(state, context, playerId)}${drawn}`;
   },
 

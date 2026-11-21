@@ -39,7 +39,7 @@ const lastPlayerKey = "lastPlayerId";
 const lastCardKey = "lastCardId";
 const pendingWinnerKey = "pendingWinnerId";
 
-const copy: Record<SupportedLanguage, Record<string, string>> = {
+const copy: Record<"de" | "en", Record<string, string>> = {
   de: {
     intro: "Lügen: Leg verdeckt ab und sag den geforderten Wert an - oder bluff.",
     doubt: "Zweifeln",
@@ -87,7 +87,7 @@ const copy: Record<SupportedLanguage, Record<string, string>> = {
 };
 
 function words(context: CardRulesetContext): Record<string, string> {
-  return copy[context.language] ?? copy.de;
+  return copy[context.language === "de" ? "de" : "en"];
 }
 
 /** Die Werte, die reihum angesagt werden. */
@@ -161,7 +161,7 @@ export const luegenRuleset: CardRuleset = {
   },
 
   rules(context): CardTableRuleSectionState[] {
-    const en = context.language === "en";
+    const en = context.language !== "de";
 
     return en
       ? [
@@ -374,7 +374,7 @@ export const luegenRuleset: CardRuleset = {
     return [
       {
         id: "end",
-        label: context.language === "en" ? "End round" : "Runde beenden",
+        label: context.language !== "de" ? "End round" : "Runde beenden",
         kind: "danger",
         enabled: state.phase === "playing" && !state.gameOver
       }
@@ -383,7 +383,7 @@ export const luegenRuleset: CardRuleset = {
 
   runHostAction(state, context, actionId) {
     return actionId === "end"
-      ? finishGame(state, null, null, context.language === "en" ? "The host ended the round." : "Der Host hat die Runde beendet.")
+      ? finishGame(state, null, null, context.language !== "de" ? "The host ended the round." : "Der Host hat die Runde beendet.")
       : state;
   },
 
